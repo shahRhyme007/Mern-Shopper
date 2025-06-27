@@ -1,0 +1,67 @@
+.api-status-banner {
+  background: linear-gradient(90deg, #ff6b35, #ff8c42);
+  color: white;
+  padding: 8px 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.api-status-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.api-status-icon {
+  font-size: 16px;
+}
+
+.api-status-text {
+  flex: 1;
+  text-align: center;
+}
+
+.api-status-retry {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.api-status-retry:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Adjust navbar when status banner is showing */
+body.api-offline .navbar {
+  margin-top: 40px;
+}
+
+@media (max-width: 768px) {
+  .api-status-content {
+    font-size: 12px;
+    gap: 8px;
+  }
+  
+  .api-status-text {
+    font-size: 11px;
+  }
+  
+  .api-status-retry {
+    font-size: 10px;
+    padding: 3px 8px;
+  }
+} 
