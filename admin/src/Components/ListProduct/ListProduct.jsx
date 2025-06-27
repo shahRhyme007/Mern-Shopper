@@ -37,19 +37,19 @@ const ListProduct = () => {
     const remove_product = async (id) => {
         try {
             const response = await fetch('http://localhost:4000/removeproduct', {
-                method: 'POST',
-                headers: {
-                    Accept: 'application/json',
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ id: id }),
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id: id }),
             })
             
             const data = await response.json()
             
             if (data.success) {
                 alert(`Product "${data.name}" removed successfully`)
-                // updated product list will be shown 
+        // updated product list will be shown 
                 await fetchInfo()
             } else {
                 throw new Error(data.errors || "Failed to remove product")
@@ -96,9 +96,9 @@ const ListProduct = () => {
         )
     }
 
-    return (
-        <div className='list-product'>
-            <h1>All Products List</h1>
+  return (
+    <div className='list-product'>
+        <h1>All Products List</h1>
             
             {allproducts.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '50px' }}>
@@ -106,18 +106,18 @@ const ListProduct = () => {
                 </div>
             ) : (
                 <>
-                    <div className="listproduct-format-main">
-                        <p>Products</p>
-                        <p>Title</p>
-                        <p>Old Price</p>
-                        <p>New Price</p>
-                        <p>Category</p>
-                        <p>Remove</p>
-                    </div>
-                    {/* here we will map our product data that we will fetch using the api   */}
-                    
-                    <div className="listproduct-allproducts">
-                        <hr />
+        <div className="listproduct-format-main">
+            <p>Products</p>
+            <p>Title</p>
+            <p>Old Price</p>
+            <p>New Price</p>
+            <p>Category</p>
+            <p>Remove</p>
+        </div>
+        {/* here we will map our product data that we will fetch using the api   */}
+        
+        <div className="listproduct-allproducts">
+            <hr />
                         {allproducts.map((product, index) => {
                             return (
                                 <div key={product.id || index}>
@@ -131,10 +131,10 @@ const ListProduct = () => {
                                                 e.target.alt = 'Image not found'
                                             }}
                                         />
-                                        <p>{product.name}</p>
-                                        <p>${product.old_price}</p>
-                                        <p>${product.new_price}</p>
-                                        <p>{product.category}</p>
+                    <p>{product.name}</p>
+                    <p>${product.old_price}</p>
+                    <p>${product.new_price}</p>
+                    <p>{product.category}</p>
                                         <img 
                                             onClick={() => {
                                                 if (window.confirm(`Are you sure you want to remove "${product.name}"?`)) {
@@ -147,8 +147,8 @@ const ListProduct = () => {
                                             style={{ cursor: 'pointer' }}
                                             title="Remove product"
                                         />
-                                    </div>
-                                    <hr />
+                </div>
+                <hr />
                                 </div>
                             )
                         })}
@@ -156,7 +156,7 @@ const ListProduct = () => {
                 </>
             )}
         </div>
-    )
+  )
 }
 
 export default ListProduct

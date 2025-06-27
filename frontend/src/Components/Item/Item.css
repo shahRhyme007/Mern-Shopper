@@ -22,20 +22,20 @@
     position: absolute;
     top: 10px;
     right: 10px;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.95);
     border: none;
     border-radius: 50%;
-    width: 35px;
-    height: 35px;
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 16px;
     transition: all 0.3s ease;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     opacity: 0;
     transform: scale(0.8);
+    color: #666;
 }
 
 .item-image-container:hover .wishlist-btn {
@@ -47,6 +47,7 @@
     background: white;
     transform: scale(1.1);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    color: #ff4141;
 }
 
 .wishlist-btn.active {
@@ -58,6 +59,7 @@
 
 .wishlist-btn.active:hover {
     background: #ff2b2b;
+    transform: scale(1.1);
 }
 
 .item p{
@@ -105,9 +107,8 @@
   }
 
   .wishlist-btn {
-    width: 30px;
-    height: 30px;
-    font-size: 14px;
+    width: 32px;
+    height: 32px;
   }
 }
 
@@ -127,9 +128,8 @@
   }
 
   .wishlist-btn {
-    width: 28px;
-    height: 28px;
-    font-size: 12px;
+    width: 30px;
+    height: 30px;
     top: 8px;
     right: 8px;
   }
@@ -151,9 +151,8 @@
   }
 
   .wishlist-btn {
-    width: 25px;
-    height: 25px;
-    font-size: 11px;
+    width: 28px;
+    height: 28px;
     top: 6px;
     right: 6px;
     opacity: 1; /* Always visible on smaller screens */

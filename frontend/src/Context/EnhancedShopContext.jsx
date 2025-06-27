@@ -335,7 +335,34 @@ const ShopContextProvider = (props) => {
         }
 
         try {
-            const data = await makeAPICall('/addtowishlist', {
+            // Check if item is already in wishlist
+            if (isInWishlist(itemId)) {
+                // Remove from wishlist
+                await removeFromWishlist(itemId);
+            } else {
+                // Add to wishlist
+                const data = await makeAPICall('/addtowishlist', {
+                    method: 'POST',
+                    body: JSON.stringify({ itemId })
+                });
+                
+                if (data.success) {
+                    await fetchUserWishlist();
+                }
+            }
+        } catch (error) {
+            console.error('Error toggling wishlist:', error);
+        }
+    };
+
+    const removeFromWishlist = async (itemId) => {
+        if (!isAuthenticated) {
+            alert('Please login to manage your wishlist');
+            return;
+        }
+
+        try {
+            const data = await makeAPICall('/removefromwishlist', {
                 method: 'POST',
                 body: JSON.stringify({ itemId })
             });
@@ -344,7 +371,7 @@ const ShopContextProvider = (props) => {
                 await fetchUserWishlist();
             }
         } catch (error) {
-            console.error('Error adding to wishlist:', error);
+            console.error('Error removing from wishlist:', error);
         }
     };
 
@@ -425,6 +452,7 @@ const ShopContextProvider = (props) => {
         // Wishlist functionality
         wishlist,
         addToWishlist,
+        removeFromWishlist,
         isInWishlist,
         
         // Search and utility functions

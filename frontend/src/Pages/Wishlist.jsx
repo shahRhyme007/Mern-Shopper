@@ -1,11 +1,18 @@
 import React, { useContext } from 'react'
 import { ShopContext } from '../Context/EnhancedShopContext'
+import { Trash2 } from 'lucide-react'
 import Item from '../Components/Item/Item'
 import Loading from '../Components/Loading/Loading'
 import './CSS/Wishlist.css'
 
 const Wishlist = () => {
-  const { wishlist, isAuthenticated, loading } = useContext(ShopContext)
+  const { wishlist, isAuthenticated, loading, removeFromWishlist } = useContext(ShopContext)
+
+  const handleRemoveFromWishlist = async (itemId, itemName) => {
+    if (window.confirm(`Remove "${itemName}" from your wishlist?`)) {
+      await removeFromWishlist(itemId);
+    }
+  }
 
   if (!isAuthenticated) {
     return (
@@ -38,14 +45,23 @@ const Wishlist = () => {
           </p>
           <div className="wishlist-products">
             {wishlist.map((item, i) => (
-              <Item 
-                key={i} 
-                id={item.id} 
-                name={item.name} 
-                image={item.image} 
-                new_price={item.new_price} 
-                old_price={item.old_price}
-              />
+              <div key={i} className="wishlist-item-wrapper">
+                <Item 
+                  id={item.id} 
+                  name={item.name} 
+                  image={item.image} 
+                  new_price={item.new_price} 
+                  old_price={item.old_price}
+                />
+                <button 
+                  className="wishlist-remove-btn"
+                  onClick={() => handleRemoveFromWishlist(item.id, item.name)}
+                  title="Remove from wishlist"
+                >
+                  <Trash2 size={16} />
+                  Remove from Wishlist
+                </button>
+              </div>
             ))}
           </div>
         </div>

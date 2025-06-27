@@ -3,6 +3,7 @@
 import React, { useContext } from 'react'
 import './Item.css'
 import { Link } from 'react-router-dom'
+import { Heart } from 'lucide-react'
 import { ShopContext } from '../../Context/EnhancedShopContext'
 
 const Item = (props) => {
@@ -41,7 +42,11 @@ const Item = (props) => {
             onClick={handleWishlistToggle}
             title={isInWishlist(props.id) ? 'Remove from wishlist' : 'Add to wishlist'}
           >
-            ❤️
+            <Heart 
+              size={18} 
+              fill={isInWishlist(props.id) ? 'currentColor' : 'none'}
+              strokeWidth={2}
+            />
           </button>
         </div>
       </Link>

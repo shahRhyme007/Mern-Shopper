@@ -72,25 +72,25 @@ const AddProduct = () => {
         setErrors({})
 
         try {
-            let responseData; 
-            // creating a copy of productDetails object
-            let product = productDetails; 
+        let responseData; 
+        // creating a copy of productDetails object
+        let product = productDetails; 
 
-            let formData = new FormData()
-            // we will append the img in the form data
-            formData.append("product", image)
+        let formData = new FormData()
+        // we will append the img in the form data
+        formData.append("product", image)
 
-                    // now we have to send the form data to the api(fetchapi) to send to backend
+        // now we have to send the form data to the api(fetchapi) to send to backend
         const uploadResponse = await fetch('http://localhost:4000/upload', {
-                method: 'POST',
-                headers: {
-                    Accept: 'application/json',
-                },
-                body: formData,
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+            },
+            body: formData,
             })
             
             responseData = await uploadResponse.json()
-            
+        
             // Check if upload was successful
             if (!responseData.success) {
                 throw new Error(responseData.message || "Failed to upload image")
@@ -103,7 +103,7 @@ const AddProduct = () => {
             
             console.log("Sending product data:", product);
             
-                    // we received the image url now we can send it to the app product endpoint
+            // we received the image url now we can send it to the app product endpoint
         const addProductResponse = await fetch('http://localhost:4000/addproduct', {
                 method: 'POST',
                 headers: {
@@ -140,8 +140,8 @@ const AddProduct = () => {
         }
     }
 
-    return (
-        <div className="add-product">
+  return (
+    <div className="add-product">
             {/* Display general errors */}
             {errors.general && (
                 <div style={{ color: 'red', marginBottom: '10px', padding: '10px', backgroundColor: '#fee', borderRadius: '4px' }}>
@@ -149,9 +149,9 @@ const AddProduct = () => {
                 </div>
             )}
             
-            {/* product name */}
-            <div className="addproduct-itemfield">
-                <p>Product title</p>
+        {/* product name */}
+        <div className="addproduct-itemfield">
+            <p>Product title</p>
                 <input 
                     value={productDetails.name} 
                     onChange={changeHandler} 
@@ -162,12 +162,12 @@ const AddProduct = () => {
                     style={errors.name ? { borderColor: 'red' } : {}}
                 />
                 {errors.name && <span style={{ color: 'red', fontSize: '12px' }}>{errors.name}</span>}
-            </div>
+        </div>
 
-            {/* product Price */}
-            <div className="addproduct-price">
-                <div className="addproduct-itemfield">
-                    <p>Price</p>
+        {/* product Price */}
+        <div className="addproduct-price">
+            <div className="addproduct-itemfield">
+                <p>Price</p>
                     <input 
                         value={productDetails.old_price} 
                         onChange={changeHandler} 
@@ -180,9 +180,9 @@ const AddProduct = () => {
                         style={errors.old_price ? { borderColor: 'red' } : {}}
                     />
                     {errors.old_price && <span style={{ color: 'red', fontSize: '12px' }}>{errors.old_price}</span>}
-                </div>
-                <div className="addproduct-itemfield">
-                    <p>Offer Price</p>
+            </div>
+            <div className="addproduct-itemfield">
+                <p>Offer Price</p>
                     <input 
                         value={productDetails.new_price} 
                         onChange={changeHandler} 
@@ -199,8 +199,8 @@ const AddProduct = () => {
             </div>
             
             {/* product category */}
-            <div className="addproduct-itemfield">
-                <p>Product Category</p>
+        <div className="addproduct-itemfield">
+            <p>Product Category</p>
                 <select 
                     value={productDetails.category} 
                     onChange={changeHandler} 
@@ -208,15 +208,15 @@ const AddProduct = () => {
                     className="add-product-selector"
                     disabled={loading}
                 >
-                    <option value="women">Women</option>
-                    <option value="men">Men</option>
-                    <option value="kid">Kid</option>
-                </select>
-            </div>
+                <option value="women">Women</option>
+                <option value="men">Men</option>
+                <option value="kid">Kid</option>
+            </select>
+        </div>
 
-            {/* image upload of the product */}
-            <div className="addproduct-itemfield">
-                <label htmlFor="file-input">
+        {/* image upload of the product */}
+        <div className="addproduct-itemfield">
+            <label htmlFor="file-input">
                     {/* if image selected show the selected image otherwise show the upload area image */}
                     <img 
                         src={image ? URL.createObjectURL(image) : upload_area} 
@@ -224,8 +224,8 @@ const AddProduct = () => {
                         alt="" 
                         style={errors.image ? { border: '2px solid red' } : {}}
                     />
-                </label>
-                {/* hidden is used to hide the input field . so the img is just shown */}
+            </label>
+            {/* hidden is used to hide the input field . so the img is just shown */}
                 <input 
                     onChange={imageHandler} 
                     type="file" 
@@ -236,9 +236,9 @@ const AddProduct = () => {
                     accept="image/*"
                 />
                 {errors.image && <div style={{ color: 'red', fontSize: '12px', marginTop: '5px' }}>{errors.image}</div>}
-            </div>
+        </div>
 
-            {/* add button */}
+        {/* add button */}
             <button 
                 onClick={() => Add_Product()} 
                 className="addproduct-btn"
@@ -250,8 +250,8 @@ const AddProduct = () => {
             >
                 {loading ? "ADDING..." : "ADD"}
             </button>
-        </div>
-    )
+    </div>
+  )
 }
 
 export default AddProduct
