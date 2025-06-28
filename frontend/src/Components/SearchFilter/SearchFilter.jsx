@@ -1,10 +1,11 @@
 import React, { useState, useContext, useEffect, useCallback } from 'react'
+import { Search } from 'lucide-react'
 import { ShopContext } from '../../Context/EnhancedShopContext'
 import './SearchFilter.css'
 
-const SearchFilter = ({ onResultsChange, showFilters = true }) => {
+const SearchFilter = ({ onResultsChange, showFilters = true, initialQuery = '' }) => {
   const { searchProducts, all_product } = useContext(ShopContext)
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchQuery, setSearchQuery] = useState(initialQuery)
   const [filters, setFilters] = useState({
     category: '',
     minPrice: '',
@@ -27,6 +28,12 @@ const SearchFilter = ({ onResultsChange, showFilters = true }) => {
   ]
 
   const performSearch = useCallback(async () => {
+    if (!searchQuery.trim() && !Object.values(filters).some(f => f !== '' && f !== 'name' && f !== 'asc')) {
+      setSearchResults([])
+      onResultsChange && onResultsChange([])
+      return
+    }
+
     setIsSearching(true)
     try {
       const searchFilters = {
@@ -51,19 +58,19 @@ const SearchFilter = ({ onResultsChange, showFilters = true }) => {
     }
   }, [searchQuery, filters, searchProducts, onResultsChange])
 
-  // Debounced search function
+  // Initialize search query when initialQuery prop changes
+  useEffect(() => {
+    setSearchQuery(initialQuery)
+  }, [initialQuery])
+
+  // Perform search when searchQuery or filters change
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      if (searchQuery.trim() || Object.values(filters).some(f => f !== '' && f !== 'name' && f !== 'asc')) {
-        performSearch()
-      } else {
-        setSearchResults([])
-        onResultsChange && onResultsChange([])
-      }
+      performSearch()
     }, 300)
 
     return () => clearTimeout(timeoutId)
-  }, [searchQuery, filters, performSearch, onResultsChange])
+  }, [performSearch])
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value)
@@ -126,7 +133,7 @@ const SearchFilter = ({ onResultsChange, showFilters = true }) => {
             {isSearching ? (
               <div className="search-spinner"></div>
             ) : (
-              <span>🔍</span>
+              <Search className="h-4 w-4 text-gray-400" />
             )}
           </div>
           

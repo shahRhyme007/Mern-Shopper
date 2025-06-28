@@ -8,6 +8,7 @@ import './CSS/SearchResults.css'
 const SearchResults = () => {
   const [searchResults, setSearchResults] = useState([])
   const [loading, setLoading] = useState(false)
+  const [currentQuery, setCurrentQuery] = useState('')
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -15,14 +16,19 @@ const SearchResults = () => {
   const searchParams = new URLSearchParams(location.search)
   const initialQuery = searchParams.get('q') || ''
 
+  // Update current query when URL changes
+  useEffect(() => {
+    setCurrentQuery(initialQuery)
+  }, [initialQuery, location.search])
+
   useEffect(() => {
     // Set page title
-    if (initialQuery) {
-      document.title = `Search Results for "${initialQuery}" - SHOPPER`
+    if (currentQuery) {
+      document.title = `Search Results for "${currentQuery}" - SHOPPER`
     } else {
       document.title = 'Search Products - SHOPPER'
     }
-  }, [initialQuery])
+  }, [currentQuery])
 
   const handleResultsChange = (results) => {
     setSearchResults(results)
@@ -38,18 +44,20 @@ const SearchResults = () => {
       <div className="search-results-container">
         <div className="search-header">
           <h1>Search Products</h1>
-          {initialQuery && (
+          {currentQuery && (
             <p className="search-query-display">
-              Results for: "<span className="query-text">{initialQuery}</span>"
+              Results for: "<span className="query-text">{currentQuery}</span>"
             </p>
           )}
         </div>
 
         {/* Search and Filter Component */}
         <SearchFilter 
+          key={location.search} // Force re-render when URL changes
           onResultsChange={handleResultsChange}
           onSearchStart={handleSearchStart}
           showFilters={true}
+          initialQuery={currentQuery}
         />
 
         {/* Search Results */}
@@ -69,7 +77,7 @@ const SearchResults = () => {
                 />
               ))}
             </div>
-          ) : initialQuery || searchResults.length === 0 ? (
+          ) : currentQuery || searchResults.length === 0 ? (
             <div className="no-results">
               <div className="no-results-icon">🔍</div>
               <h3>No products found</h3>
