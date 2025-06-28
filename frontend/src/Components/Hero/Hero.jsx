@@ -5,7 +5,7 @@ import './Hero.css'
 import { motion } from 'framer-motion'
 import { ArrowRight, Sparkles } from 'lucide-react'
 import Marquee from 'react-fast-marquee'
-import { Button } from '../ui/button'
+import { Button } from '../../Components/ui/button'
 import { fadeInUp, staggerContainer } from '../../lib/utils'
 
 import hand_icon from '../Assets/hand_icon.png'

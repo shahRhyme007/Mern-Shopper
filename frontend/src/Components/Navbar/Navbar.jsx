@@ -7,7 +7,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import logo from '../Assets/logo.png'
 import { Link, useNavigate } from 'react-router-dom'
 import { ShopContext } from '../../Context/EnhancedShopContext'
-import { Button } from '../ui/button'
+import { Button } from '../../Components/ui/button'
 import { cn } from '../../lib/utils'
 
 const Navbar = () => {
