@@ -694,6 +694,58 @@ app.post('/removeproduct', [
     }
 });
 
+// Update product details (old_price, new_price, category)
+app.post('/updateproduct', [
+    body('id').isInt({ min: 1 }).withMessage('Product ID must be a positive integer'),
+    body('old_price').optional().isFloat({ min: 0 }).withMessage('Old price must be a positive number'),
+    body('new_price').optional().isFloat({ min: 0 }).withMessage('New price must be a positive number'),
+    body('category').optional().isIn(['men', 'women', 'kid']).withMessage('Category must be men, women, or kid')
+], handleValidationErrors, async (req, res) => {
+    try {
+        const { id, old_price, new_price, category } = req.body;
+        
+        // Build update object with only provided fields
+        const updateFields = {};
+        if (old_price !== undefined) updateFields.old_price = old_price;
+        if (new_price !== undefined) updateFields.new_price = new_price;
+        if (category !== undefined) updateFields.category = category;
+        
+        // Check if at least one field is being updated
+        if (Object.keys(updateFields).length === 0) {
+            return res.status(400).json({
+                success: false,
+                errors: "At least one field (old_price, new_price, or category) must be provided"
+            });
+        }
+        
+        const result = await Product.findOneAndUpdate(
+            { id: id },
+            updateFields,
+            { new: true, runValidators: true }
+        );
+        
+        if (!result) {
+            return res.status(404).json({
+                success: false,
+                errors: "Product not found"
+            });
+        }
+        
+        console.log("Product Updated Successfully:", result.name);
+        res.json({
+            success: true,
+            message: "Product updated successfully",
+            product: result
+        });
+    } catch (error) {
+        console.error('Error updating product:', error);
+        res.status(500).json({
+            success: false,
+            errors: "Failed to update product in database"
+        });
+    }
+});
+
 // getting all the products from the database and displaying on the web page
 app.get('/allproducts', async (req, res) => {
     try {

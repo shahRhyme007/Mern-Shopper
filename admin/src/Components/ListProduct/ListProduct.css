@@ -39,6 +39,112 @@
     overflow-y: auto;
 }
 
+/* Edit functionality styles */
+.edit-input {
+    width: 80px;
+    padding: 6px 8px;
+    border: 2px solid #007bff;
+    border-radius: 4px;
+    font-size: 14px;
+    text-align: center;
+    background-color: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+.edit-input:focus {
+    outline: none;
+    border-color: #0056b3;
+    background-color: white;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.edit-select {
+    width: 90px;
+    padding: 6px 8px;
+    border: 2px solid #007bff;
+    border-radius: 4px;
+    font-size: 14px;
+    background-color: #f8f9fa;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.edit-select:focus {
+    outline: none;
+    border-color: #0056b3;
+    background-color: white;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.product-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.action-btn:active {
+    transform: translateY(0);
+}
+
+.action-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.edit-btn {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.edit-btn:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+}
+
+.save-btn {
+    background-color: #28a745;
+    color: white;
+    border-color: #28a745;
+}
+
+.save-btn:hover {
+    background-color: #1e7e34;
+    border-color: #1e7e34;
+}
+
+.cancel-btn {
+    background-color: #6c757d;
+    color: white;
+    border-color: #6c757d;
+}
+
+.cancel-btn:hover {
+    background-color: #545b62;
+    border-color: #545b62;
+}
+
 /* media queries for list product for small devices */
 @media (max-width: 800px) {
     .list-product {
@@ -59,5 +165,24 @@
         height: 60px;
     }
 
+    .edit-input {
+        width: 60px;
+        padding: 4px 6px;
+        font-size: 12px;
+    }
 
+    .edit-select {
+        width: 70px;
+        padding: 4px 6px;
+        font-size: 12px;
+    }
+
+    .action-btn {
+        width: 28px;
+        height: 28px;
+    }
+
+    .product-actions {
+        gap: 4px;
+    }
 }

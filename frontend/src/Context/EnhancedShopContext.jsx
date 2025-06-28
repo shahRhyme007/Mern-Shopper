@@ -108,6 +108,22 @@ const ShopContextProvider = (props) => {
             console.error('Error in fetchAllProducts:', error);
             setError(error.message);
             
+            // Try direct fetch as last resort
+            try {
+                const directResponse = await fetch('http://localhost:4000/allproducts');
+                if (directResponse.ok) {
+                    const directData = await directResponse.json();
+                    if (Array.isArray(directData) && directData.length > 0) {
+                        setAllProduct(directData);
+                        setIsApiOnline(true);
+                        console.log(`✅ API Online: Loaded ${directData.length} products via direct fetch`);
+                        return;
+                    }
+                }
+            } catch (directError) {
+                console.error('Direct fetch also failed:', directError);
+            }
+            
             // Fallback to static data on error
             console.log('⚠️ API Error: Using static data as fallback');
             setAllProduct(all_product_static);
@@ -116,6 +132,12 @@ const ShopContextProvider = (props) => {
             setLoading(false);
         }
     }, [makeAPICall]);
+
+    // Function to retry API connection
+    const retryApiConnection = useCallback(async () => {
+        console.log('🔄 Retrying API connection...');
+        await fetchAllProducts();
+    }, [fetchAllProducts]);
 
     // Load user cart from backend
     const fetchUserCart = useCallback(async () => {
@@ -466,7 +488,10 @@ const ShopContextProvider = (props) => {
         // Refresh functions
         fetchAllProducts,
         fetchUserCart,
-        fetchUserWishlist
+        fetchUserWishlist,
+        
+        // Additional functions
+        retryApiConnection
     };
 
     return (

@@ -1,8 +1,15 @@
-import React from 'react'
+import React, { useContext } from 'react'
+import { ShopContext } from '../../Context/EnhancedShopContext'
 import './ApiStatus.css'
 
 const ApiStatus = ({ isOnline = true }) => {
+  const { retryApiConnection } = useContext(ShopContext)
+  
   if (isOnline) return null
+
+  const handleRetry = async () => {
+    await retryApiConnection()
+  }
 
   return (
     <div className="api-status-banner">
@@ -13,7 +20,7 @@ const ApiStatus = ({ isOnline = true }) => {
         </span>
         <button 
           className="api-status-retry"
-          onClick={() => window.location.reload()}
+          onClick={handleRetry}
         >
           Retry
         </button>
