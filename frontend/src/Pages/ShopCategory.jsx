@@ -2,7 +2,7 @@
 import React, { useContext, useState, useEffect, useRef } from 'react'
 import './CSS/ShopCategory.css'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronDown, Grid, List } from 'lucide-react'
+import { ChevronDown, Grid, List, Plus, Minus, ArrowUp } from 'lucide-react'
 import { ShopContext } from '../Context/EnhancedShopContext'
 import Item from '../Components/Item/Item'
 import { Button } from '../Components/ui/button'
@@ -14,7 +14,21 @@ const ShopCategory = (props) => {
   const [sortBy, setSortBy] = useState('recommendation')
   const [showSortDropdown, setShowSortDropdown] = useState(false)
   const [viewMode, setViewMode] = useState('grid')
+  const [visibleCount, setVisibleCount] = useState(10) // Track how many products to show
+  const [maxLoadedCount, setMaxLoadedCount] = useState(10) // Track maximum products loaded so far
   const dropdownRef = useRef(null)
+  
+  // Scroll to top when category changes
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: 'smooth'
+    })
+    // Reset visible count when category changes
+    setVisibleCount(10)
+    setMaxLoadedCount(10)
+  }, [props.category])
   
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -60,6 +74,9 @@ const ShopCategory = (props) => {
   }
 
   const sortedProducts = sortProducts(filteredProducts, sortBy)
+  const visibleProducts = sortedProducts.slice(0, visibleCount) // Only show products up to visibleCount
+  const hasMoreProducts = visibleCount < sortedProducts.length // Check if there are more products to load
+  const canShowLess = maxLoadedCount > 10 && visibleCount > 10 // Check if we can show less
 
   const sortOptions = [
     { value: 'recommendation', label: 'Recommended' },
@@ -70,6 +87,24 @@ const ShopCategory = (props) => {
   const handleSortChange = (newSortBy) => {
     setSortBy(newSortBy)
     setShowSortDropdown(false)
+    // Reset visible count when sorting changes
+    setVisibleCount(10)
+    setMaxLoadedCount(10)
+  }
+
+  const handleLoadMore = () => {
+    const newCount = visibleCount + 10
+    setVisibleCount(newCount)
+    setMaxLoadedCount(Math.max(maxLoadedCount, newCount))
+  }
+
+  const handleShowLess = () => {
+    setVisibleCount(10)
+    // Smooth scroll to top of products section
+    const productsSection = document.querySelector('.products-grid')
+    if (productsSection) {
+      productsSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
   }
 
   const categoryNames = {
@@ -125,7 +160,7 @@ const ShopCategory = (props) => {
               {sortedProducts.length} Products
             </h2>
             <div className="text-sm text-gray-500">
-              Showing 1-{Math.min(12, sortedProducts.length)} of {sortedProducts.length}
+              Showing 1-{visibleProducts.length} of {sortedProducts.length}
             </div>
           </div>
 
@@ -195,7 +230,7 @@ const ShopCategory = (props) => {
         {/* Products Grid */}
         <motion.div 
           className={cn(
-            "grid gap-4 sm:gap-6 mb-8 sm:mb-12",
+            "products-grid grid gap-4 sm:gap-6 mb-8 sm:mb-12",
             viewMode === 'grid' 
               ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5" 
               : "grid-cols-1"
@@ -204,8 +239,8 @@ const ShopCategory = (props) => {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
         >
-          {sortedProducts.length > 0 ? (
-            sortedProducts.map((item, i) => (
+          {visibleProducts.length > 0 ? (
+            visibleProducts.map((item, i) => (
               <motion.div
                 key={item.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -233,21 +268,37 @@ const ShopCategory = (props) => {
           )}
         </motion.div>
 
-        {/* Load More Button - Hidden if all products shown */}
-        {sortedProducts.length > 12 && (
+        {/* Load More / Show Less Button */}
+        {(hasMoreProducts || canShowLess) && (
           <motion.div 
             className="text-center"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8 }}
           >
-            <Button 
-              variant="outline" 
-              size="lg"
-              className="px-8 py-3"
-            >
-              Load More Products
-            </Button>
+            {hasMoreProducts ? (
+              <Button 
+                onClick={handleLoadMore}
+                className="group relative overflow-hidden bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white font-semibold px-8 py-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 ease-out"
+              >
+                <span className="flex items-center space-x-2">
+                  <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
+                  <span>Load More Products</span>
+                </span>
+                <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300 rounded-full"></div>
+              </Button>
+            ) : (
+              <Button 
+                onClick={handleShowLess}
+                className="group relative overflow-hidden bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white font-semibold px-8 py-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 ease-out"
+              >
+                <span className="flex items-center space-x-2">
+                  <ArrowUp className="w-5 h-5 group-hover:-translate-y-1 transition-transform duration-300" />
+                  <span>Show Less Products</span>
+                </span>
+                <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300 rounded-full"></div>
+              </Button>
+            )}
           </motion.div>
         )}
       </div>
