@@ -60,29 +60,34 @@ const ProductDisplay = (props) => {
   const sizes = ['S', 'M', 'L', 'XL', 'XXL']
   
   useEffect(() => {
-    // Add a small delay to ensure DOM elements are rendered
+    // Simple setup without animations to prevent tilted appearance
     const timer = setTimeout(() => {
       try {
-        if (!containerRef.current || !imageRef.current || !detailsRef.current || !priceRef.current || !buttonRef.current) {
-          return;
+        // Just ensure all elements are visible and properly positioned
+        if (containerRef.current) {
+          containerRef.current.style.opacity = '1';
+          containerRef.current.style.transform = 'none';
         }
-
-        // Simple GSAP setup - just make elements visible
-        gsap.set(containerRef.current, { opacity: 1 });
-        gsap.set(imageRef.current, { opacity: 1 });
-        gsap.set(detailsRef.current, { opacity: 1 });
-        gsap.set(priceRef.current, { opacity: 1 });
-        gsap.set(buttonRef.current, { opacity: 1 });
+        if (imageRef.current) {
+          imageRef.current.style.opacity = '1';
+          imageRef.current.style.transform = 'none';
+        }
+        if (detailsRef.current) {
+          detailsRef.current.style.opacity = '1';
+          detailsRef.current.style.transform = 'none';
+        }
+        if (priceRef.current) {
+          priceRef.current.style.opacity = '1';
+          priceRef.current.style.transform = 'none';
+        }
+        if (buttonRef.current) {
+          buttonRef.current.style.opacity = '1';
+          buttonRef.current.style.transform = 'none';
+        }
       } catch (error) {
-        console.warn('GSAP animation error:', error);
-        // Fallback: just show elements without animation
-        if (containerRef.current) containerRef.current.style.opacity = '1';
-        if (imageRef.current) imageRef.current.style.opacity = '1';
-        if (detailsRef.current) detailsRef.current.style.opacity = '1';
-        if (priceRef.current) priceRef.current.style.opacity = '1';
-        if (buttonRef.current) buttonRef.current.style.opacity = '1';
+        console.warn('Element setup error:', error);
       }
-    }, 100);
+    }, 50);
 
     return () => clearTimeout(timer);
   }, [product])
@@ -130,17 +135,14 @@ const ProductDisplay = (props) => {
   }
   
   const handleWishlistToggle = () => {
-    // Heart animation
+    // Simple CSS-based heart animation
     try {
       const wishlistBtn = document.querySelector('.wishlist-btn');
       if (wishlistBtn) {
-        gsap.to(wishlistBtn, {
-          scale: 1.2,
-          duration: 0.2,
-          yoyo: true,
-          repeat: 1,
-          ease: "none"
-        })
+        wishlistBtn.style.transform = 'scale(1.2)';
+        setTimeout(() => {
+          wishlistBtn.style.transform = 'scale(1)';
+        }, 150);
       }
     } catch (error) {
       console.warn('Wishlist animation error:', error);
@@ -152,14 +154,14 @@ const ProductDisplay = (props) => {
   const handleImageSelect = (index) => {
     setSelectedImageIndex(index)
     
-    // Image transition animation
+    // Simple CSS-based image transition
     try {
       const mainImage = document.querySelector('.main-product-image');
       if (mainImage) {
-        gsap.fromTo(mainImage,
-          { opacity: 0, scale: 0.9 },
-          { opacity: 1, scale: 1, duration: 0.3, ease: "none" }
-        )
+        mainImage.style.opacity = '0.7';
+        setTimeout(() => {
+          mainImage.style.opacity = '1';
+        }, 150);
       }
     } catch (error) {
       console.warn('Image transition animation error:', error);

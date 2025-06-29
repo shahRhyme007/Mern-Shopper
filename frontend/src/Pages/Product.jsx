@@ -31,42 +31,20 @@ const Product = () => {
       // Scroll to top smoothly when product changes
       window.scrollTo({ top: 0, behavior: 'smooth' });
       
-      // GSAP animations for page sections
+      // Simple setup without complex animations to prevent tilted appearance
       const timer = setTimeout(() => {
         try {
-          const sections = pageRef.current.querySelectorAll('.product-section');
-          
-          // Animate sections on scroll
-          sections.forEach((section, index) => {
-            gsap.fromTo(section,
-              { opacity: 0, y: 50 },
-              {
-                opacity: 1,
-                y: 0,
-                duration: 0.8,
-                ease: "none",
-                scrollTrigger: {
-                  trigger: section,
-                  start: "top 85%",
-                  end: "bottom 15%",
-                  toggleActions: "play none none reverse"
-                },
-                delay: index * 0.1
-              }
-            );
-          });
-        } catch (error) {
-          console.warn('Page sections animation error:', error);
-          // Fallback: just show sections without animation
           if (pageRef.current) {
             const sections = pageRef.current.querySelectorAll('.product-section');
             sections.forEach(section => {
               section.style.opacity = '1';
-              section.style.transform = 'translateY(0)';
+              section.style.transform = 'none';
             });
           }
+        } catch (error) {
+          console.warn('Page sections setup error:', error);
         }
-      }, 100);
+      }, 50);
 
       return () => clearTimeout(timer);
     }
@@ -225,7 +203,7 @@ const Product = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.8 }}
       >
-        <RelatedProducts />
+        <RelatedProducts currentProductId={product.id} />
       </motion.div>
     </motion.div>
   );
