@@ -22,16 +22,36 @@ const CartItems = () => {
     const [promoCode, setPromoCode] = useState('')
     const [isPromoApplied, setIsPromoApplied] = useState(false)
 
-    // Get cart items with details
-    const cartProducts = all_product.filter(product => cartItems[product.id] > 0)
+    // Get cart items with details (handle both old format and new format with sizes)
+    const cartProducts = Object.keys(cartItems)
+        .filter(cartKey => cartItems[cartKey] > 0)
+        .map(cartKey => {
+            // Extract product ID and size from cart key
+            const productId = cartKey.includes('_') ? parseInt(cartKey.split('_')[0]) : parseInt(cartKey);
+            const size = cartKey.includes('_') ? cartKey.split('_')[1] : null;
+            
+            const product = all_product.find(p => p.id === productId);
+            if (!product) return null;
+            
+            return {
+                ...product,
+                cartKey,
+                selectedSize: size,
+                quantity: cartItems[cartKey]
+            };
+        })
+        .filter(item => item !== null);
+    
     const isEmpty = cartProducts.length === 0
 
-    const handleQuantityChange = (productId, change) => {
+    const handleQuantityChange = (cartKey, change) => {
         if (change > 0) {
-            addToCart(productId)
-        } else if (change < 0 && cartItems[productId] > 1) {
-            // You might need to implement decreaseQuantity in context
-            removeFromCart(productId)
+            // Extract product ID and size from cart key
+            const productId = cartKey.includes('_') ? parseInt(cartKey.split('_')[0]) : parseInt(cartKey);
+            const size = cartKey.includes('_') ? cartKey.split('_')[1] : null;
+            addToCart(productId, size)
+        } else if (change < 0 && cartItems[cartKey] > 1) {
+            removeFromCart(cartKey)
         }
     }
 
@@ -133,7 +153,7 @@ const CartItems = () => {
                                 <AnimatePresence>
                                     {cartProducts.map((product, index) => (
                                         <motion.div
-                                            key={product.id}
+                                            key={product.cartKey}
                                             variants={itemVariants}
                                             initial="hidden"
                                             animate="visible"
@@ -142,40 +162,49 @@ const CartItems = () => {
                                             className={`p-6 ${index !== cartProducts.length - 1 ? 'border-b border-gray-200' : ''}`}
                                         >
                                             <div className="flex items-center space-x-4">
-                                                {/* Product Image */}
-                                                <div className="relative w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                                                    <img
-                                                        src={product.image}
-                                                        alt={product.name}
-                                                        className="w-full h-full object-cover"
-                                                    />
-                                                </div>
+                                                {/* Product Image - Clickable */}
+                                                <Link to={`/product/${product.id}`} onClick={() => window.scrollTo(0,0)}>
+                                                    <div className="relative w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 cursor-pointer hover:shadow-lg transition-shadow">
+                                                        <img
+                                                            src={product.image}
+                                                            alt={product.name}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    </div>
+                                                </Link>
 
-                                                {/* Product Details */}
+                                                {/* Product Details - Clickable */}
                                                 <div className="flex-1 min-w-0">
-                                                    <h3 className="text-lg font-medium text-gray-900 truncate">
-                                                        {product.name}
-                                                    </h3>
+                                                    <Link to={`/product/${product.id}`} onClick={() => window.scrollTo(0,0)}>
+                                                        <h3 className="text-lg font-medium text-gray-900 truncate hover:text-red-500 transition-colors cursor-pointer">
+                                                            {product.name}
+                                                        </h3>
+                                                    </Link>
                                                     <p className="text-sm text-gray-500 mt-1">
                                                         Price: ${product.new_price}
                                                     </p>
+                                                    {product.selectedSize && (
+                                                        <p className="text-sm text-gray-600 mt-1">
+                                                            Size: <span className="font-medium bg-gray-100 px-2 py-1 rounded text-xs">{product.selectedSize}</span>
+                                                        </p>
+                                                    )}
                                                 </div>
 
                                                 {/* Quantity Controls */}
                                                 <div className="flex items-center space-x-3">
                                                     <div className="flex items-center border border-gray-300 rounded-lg">
                                                         <button
-                                                            onClick={() => handleQuantityChange(product.id, -1)}
+                                                            onClick={() => handleQuantityChange(product.cartKey, -1)}
                                                             className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50"
-                                                            disabled={cartItems[product.id] <= 1}
+                                                            disabled={product.quantity <= 1}
                                                         >
                                                             <Minus className="w-4 h-4" />
                                                         </button>
                                                         <span className="px-4 py-2 font-medium min-w-[3rem] text-center">
-                                                            {cartItems[product.id]}
+                                                            {product.quantity}
                                                         </span>
                                                         <button
-                                                            onClick={() => handleQuantityChange(product.id, 1)}
+                                                            onClick={() => handleQuantityChange(product.cartKey, 1)}
                                                             className="p-2 hover:bg-gray-100 transition-colors"
                                                         >
                                                             <Plus className="w-4 h-4" />
@@ -186,13 +215,13 @@ const CartItems = () => {
                                                 {/* Total Price */}
                                                 <div className="text-right">
                                                     <p className="text-lg font-semibold text-gray-900">
-                                                        ${(product.new_price * cartItems[product.id]).toFixed(2)}
+                                                        ${(product.new_price * product.quantity).toFixed(2)}
                                                     </p>
                                                 </div>
 
                                                 {/* Remove Button */}
                                                 <button
-                                                    onClick={() => removeFromCart(product.id)}
+                                                    onClick={() => removeFromCart(product.cartKey)}
                                                     className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                                                 >
                                                     <Trash2 className="w-5 h-5" />

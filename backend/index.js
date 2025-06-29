@@ -952,17 +952,22 @@ app.get('/getcart', fetchUser, validateUser, async (req, res) => {
 
 // Add item to cart
 app.post('/addtocart', fetchUser, validateUser, [
-    body('itemId').isInt({ min: 1 }).withMessage('Item ID must be a positive integer')
+    body('itemId').isInt({ min: 1 }).withMessage('Item ID must be a positive integer'),
+    body('size').optional().isString().trim().isLength({ min: 1, max: 10 }).withMessage('Size must be a valid string')
 ], handleValidationErrors, async (req, res) => {
     try {
         let userData = await Users.findById(req.user.id);
-        if (!userData.cartData[req.body.itemId]) {
-            userData.cartData[req.body.itemId] = 0;
+        
+        // Create cart key based on whether size is provided
+        const cartKey = req.body.size ? `${req.body.itemId}_${req.body.size}` : req.body.itemId.toString();
+        
+        if (!userData.cartData[cartKey]) {
+            userData.cartData[cartKey] = 0;
         }
-        userData.cartData[req.body.itemId] += 1;
+        userData.cartData[cartKey] += 1;
         
         await Users.findByIdAndUpdate(req.user.id, { cartData: userData.cartData });
-        console.log("Item added to cart for user:", req.user.id);
+        console.log("Item added to cart for user:", req.user.id, "Cart key:", cartKey);
         
         res.json({ 
             success: true, 
@@ -980,16 +985,21 @@ app.post('/addtocart', fetchUser, validateUser, [
 
 // Remove item from cart
 app.post('/removefromcart', fetchUser, validateUser, [
-    body('itemId').isInt({ min: 1 }).withMessage('Item ID must be a positive integer')
+    body('itemId').isInt({ min: 1 }).withMessage('Item ID must be a positive integer'),
+    body('size').optional().isString().trim().isLength({ min: 1, max: 10 }).withMessage('Size must be a valid string')
 ], handleValidationErrors, async (req, res) => {
     try {
         let userData = await Users.findById(req.user.id);
-        if (userData.cartData[req.body.itemId] && userData.cartData[req.body.itemId] > 0) {
-            userData.cartData[req.body.itemId] -= 1;
+        
+        // Create cart key based on whether size is provided
+        const cartKey = req.body.size ? `${req.body.itemId}_${req.body.size}` : req.body.itemId.toString();
+        
+        if (userData.cartData[cartKey] && userData.cartData[cartKey] > 0) {
+            userData.cartData[cartKey] -= 1;
         }
         
         await Users.findByIdAndUpdate(req.user.id, { cartData: userData.cartData });
-        console.log("Item removed from cart for user:", req.user.id);
+        console.log("Item removed from cart for user:", req.user.id, "Cart key:", cartKey);
         
         res.json({ 
             success: true, 

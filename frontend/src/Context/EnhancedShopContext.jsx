@@ -241,13 +241,13 @@ const ShopContextProvider = (props) => {
     };
 
     // Cart functions with backend sync
-    const addToCart = async (itemId) => {
+    const addToCart = async (itemId, size = null) => {
         if (isAuthenticated) {
             try {
                 setCartLoading(true);
                 const data = await makeAPICall('/addtocart', {
                     method: 'POST',
-                    body: JSON.stringify({ itemId })
+                    body: JSON.stringify({ itemId, size })
                 });
                 
                 if (data.success) {
@@ -255,30 +255,36 @@ const ShopContextProvider = (props) => {
                 }
             } catch (error) {
                 console.error('Error adding to cart:', error);
-                // Fallback to local cart update
+                // Fallback to local cart update with size
+                const cartKey = size ? `${itemId}_${size}` : itemId;
                 setCartItems((prev) => ({
                     ...prev, 
-                    [itemId]: (prev[itemId] || 0) + 1
+                    [cartKey]: (prev[cartKey] || 0) + 1
                 }));
             } finally {
                 setCartLoading(false);
             }
         } else {
-            // Local cart for non-authenticated users
+            // Local cart for non-authenticated users with size
+            const cartKey = size ? `${itemId}_${size}` : itemId;
             setCartItems((prev) => ({
                 ...prev, 
-                [itemId]: (prev[itemId] || 0) + 1
+                [cartKey]: (prev[cartKey] || 0) + 1
             }));
         }
     };
     
-    const removeFromCart = async (itemId) => {
+    const removeFromCart = async (cartKey) => {
         if (isAuthenticated) {
             try {
                 setCartLoading(true);
+                // Extract product ID and size from cart key
+                const productId = cartKey.includes('_') ? parseInt(cartKey.split('_')[0]) : parseInt(cartKey);
+                const size = cartKey.includes('_') ? cartKey.split('_')[1] : null;
+                
                 const data = await makeAPICall('/removefromcart', {
                     method: 'POST',
-                    body: JSON.stringify({ itemId })
+                    body: JSON.stringify({ itemId: productId, size })
                 });
                 
                 if (data.success) {
@@ -289,7 +295,7 @@ const ShopContextProvider = (props) => {
                 // Fallback to local cart update
                 setCartItems((prev) => ({
                     ...prev, 
-                    [itemId]: Math.max((prev[itemId] || 0) - 1, 0)
+                    [cartKey]: Math.max((prev[cartKey] || 0) - 1, 0)
                 }));
             } finally {
                 setCartLoading(false);
@@ -298,7 +304,7 @@ const ShopContextProvider = (props) => {
             // Local cart for non-authenticated users
             setCartItems((prev) => ({
                 ...prev, 
-                [itemId]: Math.max((prev[itemId] || 0) - 1, 0)
+                [cartKey]: Math.max((prev[cartKey] || 0) - 1, 0)
             }));
         }
     };
@@ -325,12 +331,14 @@ const ShopContextProvider = (props) => {
         }
     };
 
-    // Cart calculation functions (enhanced to work with dynamic data)
+    // Cart calculation functions (enhanced to work with dynamic data and sizes)
     const getTotalCartAmount = () => {
         let totalAmount = 0;
         for (const item in cartItems) {
             if (cartItems[item] > 0) {
-                let itemInfo = all_product.find((product) => product.id === Number(item));
+                // Extract product ID from cart key (handles both "id" and "id_size" formats)
+                const productId = item.includes('_') ? parseInt(item.split('_')[0]) : parseInt(item);
+                let itemInfo = all_product.find((product) => product.id === productId);
                 if (itemInfo) {
                     totalAmount = totalAmount + (itemInfo.new_price * cartItems[item]);
                 }
