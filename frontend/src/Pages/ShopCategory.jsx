@@ -2,7 +2,7 @@
 import React, { useContext, useState, useEffect, useRef } from 'react'
 import './CSS/ShopCategory.css'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronDown, Grid, List, Plus, Minus, ArrowUp } from 'lucide-react'
+import { ChevronDown, Grid, List, Plus, ArrowUp } from 'lucide-react'
 import { ShopContext } from '../Context/EnhancedShopContext'
 import Item from '../Components/Item/Item'
 import { Button } from '../Components/ui/button'

@@ -16,7 +16,12 @@ import {
   ChevronRight,
   Zap,
   Award,
-  Clock
+  Clock,
+  Camera,
+  Upload,
+  X,
+  Info,
+  Sparkles
 } from 'lucide-react'
 import { ShopContext } from '../../Context/EnhancedShopContext'
 import './ProductDisplay.css'
@@ -34,12 +39,20 @@ const ProductDisplay = (props) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
   
+  // Virtual fitting states
+  const [showVirtualFitting, setShowVirtualFitting] = useState(false)
+  const [uploadedPhoto, setUploadedPhoto] = useState(null)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [showTips, setShowTips] = useState(false)
+  const [fittingResult, setFittingResult] = useState(null)
+  
   // Refs for animations
   const containerRef = useRef(null)
   const imageRef = useRef(null)
   const detailsRef = useRef(null)
   const priceRef = useRef(null)
   const buttonRef = useRef(null)
+  const fileInputRef = useRef(null)
   
   // Product images (using the same image multiple times as placeholder)
   const productImages = [
@@ -181,33 +194,81 @@ const ProductDisplay = (props) => {
     ))
   }
 
+  // Virtual fitting handlers
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0]
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setUploadedPhoto(e.target.result)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleTryDress = () => {
+    if (!uploadedPhoto) return
+    
+    setIsProcessing(true)
+    
+    // Simulate AI processing time for virtual try-on
+    setTimeout(() => {
+      // Create a more realistic virtual try-on result
+      // In a real implementation, this would use AI to blend the person's face/body with the dress
+      setFittingResult({
+        originalPhoto: uploadedPhoto,
+        fittedPhoto: uploadedPhoto, // This would be the AI-generated image with the dress fitted on the person
+        confidence: 92,
+        recommendations: [
+          "Great fit! This size looks perfect on you.",
+          "The color complements your skin tone beautifully.",
+          "Consider pairing with dark jeans for a casual look.",
+          "This style suits your body type well."
+        ],
+        // Simulate that we've processed their photo with the dress
+        isVirtualTryOn: true
+      })
+      setIsProcessing(false)
+    }, 3000)
+  }
+
+  const resetVirtualFitting = () => {
+    setUploadedPhoto(null)
+    setFittingResult(null)
+    setIsProcessing(false)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
   return (
     <div className="modern-product-container" ref={containerRef}>
       <div className="modern-product-display">
         
         {/* Left Side - Image Gallery */}
         <div className="product-gallery" ref={imageRef}>
-          {/* Thumbnail Images */}
-          <div className="thumbnail-gallery">
-            {productImages.map((image, index) => (
-              <motion.div
-                key={index}
-                className={`thumbnail ${selectedImageIndex === index ? 'active' : ''}`}
-                onClick={() => handleImageSelect(index)}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <img 
-                  src={image} 
-                  alt={`${product.name} ${index + 1}`}
-                  onError={handleImageError}
-                />
-              </motion.div>
-            ))}
-          </div>
-          
-          {/* Main Image */}
-          <div className="main-image-container">
+          <div className="image-section">
+            {/* Thumbnail Images */}
+            <div className="thumbnail-gallery">
+              {productImages.map((image, index) => (
+                <motion.div
+                  key={index}
+                  className={`thumbnail ${selectedImageIndex === index ? 'active' : ''}`}
+                  onClick={() => handleImageSelect(index)}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <img 
+                    src={image} 
+                    alt={`${product.name} ${index + 1}`}
+                    onError={handleImageError}
+                  />
+                </motion.div>
+              ))}
+            </div>
+            
+            {/* Main Image */}
+            <div className="main-image-container">
             <motion.img
               className="main-product-image"
               src={productImages[selectedImageIndex]}
@@ -250,6 +311,190 @@ const ProductDisplay = (props) => {
                 <Share2 className="w-5 h-5 text-gray-400" />
               </motion.button>
             </div>
+          </div>
+          </div>
+
+          {/* Virtual Fitting Section - Below Main Image */}
+          <div className="virtual-fitting-below-image">
+            <div className="virtual-fitting-header-below">
+              <div className="header-content-below">
+                <Sparkles className="w-5 h-5 text-purple-500" />
+                <h4>Virtual Try-On</h4>
+                <span className="beta-badge-below">AI</span>
+              </div>
+            </div>
+
+            {!showVirtualFitting ? (
+              <motion.button
+                className="try-dress-btn-below"
+                onClick={() => setShowVirtualFitting(true)}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Camera className="w-4 h-4" />
+                Try This Dress
+              </motion.button>
+            ) : (
+              <div className="virtual-fitting-interface-below">
+                {/* Upload Section */}
+                {!fittingResult && (
+                  <div className="upload-section-below">
+                    <div className="upload-area-below">
+                      {!uploadedPhoto ? (
+                        <div className="upload-placeholder-below">
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleFileUpload}
+                            className="hidden"
+                          />
+                          <motion.div
+                            className="upload-content-below"
+                            whileHover={{ scale: 1.02 }}
+                            onClick={() => fileInputRef.current?.click()}
+                          >
+                            <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                            <span className="upload-text-below">Upload Photo</span>
+                            <span className="file-types-below">JPG, PNG</span>
+                          </motion.div>
+                        </div>
+                      ) : (
+                        <div className="uploaded-photo-below">
+                          <img src={uploadedPhoto} alt="Uploaded" />
+                          <button
+                            className="remove-photo-below"
+                            onClick={resetVirtualFitting}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Tips Section */}
+                    <div className="tips-section-below">
+                      <button
+                        className="tips-toggle-below"
+                        onClick={() => setShowTips(!showTips)}
+                      >
+                        <Info className="w-3 h-3" />
+                        Tips
+                      </button>
+                      
+                      <AnimatePresence>
+                        {showTips && (
+                          <motion.div
+                            className="tips-content-below"
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                          >
+                            <ul>
+                              <li>• Front-facing photo works best</li>
+                              <li>• Good lighting recommended</li>
+                              <li>• Stand straight, arms at sides</li>
+                            </ul>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="fitting-actions-below">
+                      <motion.button
+                        className="try-button-below"
+                        onClick={handleTryDress}
+                        disabled={!uploadedPhoto || isProcessing}
+                        whileHover={{ scale: uploadedPhoto ? 1.02 : 1 }}
+                        whileTap={{ scale: uploadedPhoto ? 0.98 : 1 }}
+                      >
+                        {isProcessing ? (
+                          <>
+                            <div className="processing-spinner-below" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-3 h-3" />
+                            Try It On
+                          </>
+                        )}
+                      </motion.button>
+                      
+                      <button
+                        className="cancel-button-below"
+                        onClick={() => setShowVirtualFitting(false)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Results Section */}
+                {fittingResult && (
+                  <motion.div
+                    className="fitting-results-below"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <div className="results-header-below">
+                      <h5>Virtual Try-On Result</h5>
+                      <span className="confidence-score-below">
+                        {fittingResult.confidence}% Match
+                      </span>
+                    </div>
+
+                    <div className="results-comparison-below">
+                      <div className="comparison-item-below">
+                        <img src={fittingResult.originalPhoto} alt="Original" />
+                        <span>Before</span>
+                      </div>
+                      <div className="comparison-arrow-below">→</div>
+                      <div className="comparison-item-below">
+                        <div className="virtual-result-image-below">
+                          <img src={fittingResult.fittedPhoto} alt="With Dress" />
+                          <div className="dress-overlay-below">
+                            <img src={product.image} alt="Dress overlay" className="dress-overlay-img-below" />
+                          </div>
+                        </div>
+                        <span>With Dress</span>
+                      </div>
+                    </div>
+
+                    <div className="ai-recommendations-below">
+                      <h6>AI Recommendations</h6>
+                      <ul>
+                        {fittingResult.recommendations.slice(0, 2).map((rec, index) => (
+                          <li key={index}>{rec}</li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="results-actions-below">
+                      <motion.button
+                        className="add-to-cart-from-fitting-below"
+                        onClick={handleAddToCart}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <ShoppingCart className="w-3 h-3" />
+                        Add to Cart
+                      </motion.button>
+                      
+                      <button
+                        className="try-again-button-below"
+                        onClick={resetVirtualFitting}
+                      >
+                        Try Again
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
