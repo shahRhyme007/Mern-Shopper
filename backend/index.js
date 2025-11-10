@@ -214,9 +214,13 @@ app.post("/upload", upload.single('product'), (req, res) => {
         });
     }
     
+    // Use environment-based URL or construct from request
+    const baseUrl = process.env.BACKEND_URL || 
+                    (req.protocol + '://' + req.get('host'));
+    
     res.json({
         success: 1,
-        image_url: `http://localhost:${port}/images/${req.file.filename}`
+        image_url: `${baseUrl}/images/${req.file.filename}`
     });
 });
 
