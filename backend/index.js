@@ -19,6 +19,8 @@ const app = express();
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const multer = require("multer");
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 // path from the express server
 const path = require("path");
@@ -174,13 +176,49 @@ app.post('/test-add', async (req, res) => {
     res.json({ success: true, message: 'Test endpoint working', received: req.body });
 })
 
-// image storage engine in diskStorage
-const storage = multer.diskStorage({
+// ================== CLOUDINARY CONFIGURATION ==================
+// Configure Cloudinary (cloud-based image storage)
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Check if Cloudinary is configured
+const isCloudinaryConfigured = () => {
+    return process.env.CLOUDINARY_CLOUD_NAME && 
+           process.env.CLOUDINARY_API_KEY && 
+           process.env.CLOUDINARY_API_SECRET;
+};
+
+// Cloudinary storage engine (permanent storage)
+const cloudinaryStorage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'mern-shopper/products',
+        allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+        transformation: [{ width: 1000, height: 1000, crop: 'limit' }] // Optimize images
+    }
+});
+
+// Local storage engine (fallback for development)
+const localStorage = multer.diskStorage({
     destination: './upload/images', 
     filename: (req, file, cb) => {
         return cb(null, `${file.fieldname}_${Date.now()}${path.extname(file.originalname)}`)
     }
-})
+});
+
+// Choose storage based on Cloudinary configuration
+const storage = isCloudinaryConfigured() ? cloudinaryStorage : localStorage;
+
+// Log storage mode
+if (isCloudinaryConfigured()) {
+    console.log('📸 Using Cloudinary for image storage (PERMANENT)');
+} else {
+    console.log('⚠️  Using local storage (TEMPORARY - images will be lost on Render restart)');
+    console.log('💡 Configure Cloudinary environment variables for permanent storage');
+}
 
 // image upload using the above storage engine with file validation
 const upload = multer({
@@ -189,11 +227,11 @@ const upload = multer({
         fileSize: parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024 // 5MB default
     },
     fileFilter: (req, file, cb) => {
-        const allowedTypes = process.env.ALLOWED_FILE_TYPES?.split(',') || ['image/jpeg', 'image/jpg', 'image/png'];
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
         if (allowedTypes.includes(file.mimetype)) {
             cb(null, true);
         } else {
-            cb(new Error('Invalid file type. Only JPEG, JPG, PNG files are allowed.'));
+            cb(new Error('Invalid file type. Only JPEG, JPG, PNG, WEBP files are allowed.'));
         }
     }
 });
@@ -214,13 +252,24 @@ app.post("/upload", upload.single('product'), (req, res) => {
         });
     }
     
-    // Use environment-based URL or construct from request
+    // If using Cloudinary, return the Cloudinary URL (permanent)
+    if (req.file.path && req.file.path.includes('cloudinary')) {
+        return res.json({
+            success: 1,
+            image_url: req.file.path, // Cloudinary URL (permanent)
+            storage: 'cloudinary'
+        });
+    }
+    
+    // If using local storage, return local URL (temporary)
     const baseUrl = process.env.BACKEND_URL || 
                     (req.protocol + '://' + req.get('host'));
     
     res.json({
         success: 1,
-        image_url: `${baseUrl}/images/${req.file.filename}`
+        image_url: `${baseUrl}/images/${req.file.filename}`,
+        storage: 'local',
+        warning: 'Local storage - images will be lost on server restart. Configure Cloudinary for permanent storage.'
     });
 });
 
