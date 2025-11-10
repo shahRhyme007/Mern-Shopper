@@ -4,8 +4,8 @@ import all_product_static from "../Components/Assets/all_product";
 // Enhanced Shop Context with backend integration
 export const ShopContext = createContext(null)
 
-// API base URL
-const API_URL = 'http://localhost:4000';
+// API base URL - Use environment variable for production, fallback to localhost for development
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
 const ShopContextProvider = (props) => {
     // Product state
