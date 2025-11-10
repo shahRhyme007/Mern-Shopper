@@ -25,7 +25,7 @@ const path = require("path");
 const cors = require("cors");
 
 // Import additional packages for Phase 5 features
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const stripe = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
 const nodemailer = require('nodemailer');
 const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
@@ -58,11 +58,14 @@ const corsOptions = {
         process.env.FRONTEND_URL,
         process.env.ADMIN_URL,
         'http://localhost:3000',
-        'http://localhost:3001', // Added for frontend running on port 3001
+        'http://localhost:3001',
         'http://localhost:5173',
         'http://127.0.0.1:5173',
         'http://127.0.0.1:3000',
-        'http://127.0.0.1:3001' // Added for frontend running on port 3001
+        'http://127.0.0.1:3001',
+        'https://mern-shopperz.vercel.app', // Production frontend
+        'https://mern-shopper-admin.vercel.app', // Production admin
+        /\.vercel\.app$/ // Allow all Vercel preview deployments
     ],
     credentials: true,
     optionsSuccessStatus: 200
@@ -1801,6 +1804,14 @@ app.post('/create-payment-intent', fetchUser, validateUser, [
     body('amount').isFloat({ min: 0.5 }).withMessage('Amount must be at least $0.50')
 ], handleValidationErrors, async (req, res) => {
     try {
+        // Check if Stripe is configured
+        if (!stripe) {
+            return res.status(503).json({
+                success: false,
+                errors: 'Payment processing is not configured. Please contact support.'
+            });
+        }
+        
         const { orderId, amount } = req.body;
         
         // Verify order belongs to user
