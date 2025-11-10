@@ -10,7 +10,7 @@
 
 **A modern, feature-rich e-commerce platform with AI-powered virtual try-on, secure payments, and comprehensive admin management.**
 
-[Features](#-key-features) • [Demo](#-demo) • [Installation](#-installation) • [Documentation](#-documentation) • [Contributing](#-contributing)
+[Features](#-key-features) • [Demo](#-demo) • [Screenshots](#-screenshots) • [Installation](#-installation) • [Documentation](#-documentation) • [Contributing](#-contributing)
 
 </div>
 
@@ -19,6 +19,8 @@
 ## 📋 Table of Contents
 
 - [Overview](#-overview)
+- [Demo](#-demo)
+- [Screenshots](#-screenshots)
 - [Key Features](#-key-features)
 - [Tech Stack](#-tech-stack)
 - [Project Structure](#-project-structure)
@@ -40,6 +42,95 @@
 **MERN Shopper** is a production-ready, full-stack e-commerce platform built with the MERN stack (MongoDB, Express.js, React.js, Node.js). It features cutting-edge AI technology for virtual try-on, secure payment processing with Stripe, comprehensive inventory management, and a powerful admin dashboard.
 
 Perfect for fashion e-commerce, clothing stores, and any business looking to provide an innovative online shopping experience with AI-powered features.
+
+---
+
+## 🎬 Demo
+
+### Live Applications
+
+🌐 **Frontend (Customer)**: [https://mern-shopperz.vercel.app](https://mern-shopperz.vercel.app)  
+🎛️ **Admin Panel**: [https://mern-shopperz-admin.vercel.app](https://mern-shopperz-admin.vercel.app)  
+🔗 **Backend API**: [https://mern-shopper.onrender.com](https://mern-shopper.onrender.com)
+
+### Test Credentials
+
+**Customer Account:**
+- Email: `test@example.com`
+- Password: `Test@123`
+
+**Admin Account:**
+- Email: `admin@shopper.com`
+- Password: `Admin@123`
+
+---
+
+## 📸 Screenshots
+
+### 🏠 Customer Frontend
+
+<div align="center">
+
+#### Homepage
+![Homepage](./screenshots/homepage.png)
+*Modern, responsive homepage with featured products and categories*
+
+#### Product Catalog
+![Product Catalog](./screenshots/product-catalog.png)
+*Browse products with advanced filtering and sorting options*
+
+#### Product Details
+![Product Details](./screenshots/product-details.png)
+*Detailed product view with multiple images and size selection*
+
+#### AI Virtual Try-On
+![Virtual Try-On](./screenshots/virtual-tryon.png)
+*AI-powered virtual try-on feature using face swap technology*
+
+#### Shopping Cart
+![Shopping Cart](./screenshots/shopping-cart.png)
+*Smart shopping cart with real-time updates and promo code support*
+
+#### Checkout
+![Checkout](./screenshots/checkout.png)
+*Secure checkout with Stripe payment integration*
+
+#### User Profile
+![User Profile](./screenshots/user-profile.png)
+*User dashboard with order history and profile management*
+
+</div>
+
+### 🎛️ Admin Dashboard
+
+<div align="center">
+
+#### Admin Dashboard
+![Admin Dashboard](./screenshots/admin-dashboard.png)
+*Comprehensive analytics dashboard with real-time statistics*
+
+#### Product Management
+![Product Management](./screenshots/admin-products.png)
+*Add, edit, and manage products with image uploads*
+
+#### Order Management
+![Order Management](./screenshots/admin-orders.png)
+*Track and manage customer orders with status updates*
+
+#### Inventory Management
+![Inventory Management](./screenshots/admin-inventory.png)
+*Real-time inventory tracking with low stock alerts*
+
+</div>
+
+### 📱 Responsive Design
+
+<div align="center">
+
+![Mobile View](./screenshots/mobile-responsive.png)
+*Fully responsive design works perfectly on all devices*
+
+</div>
 
 ---
 
