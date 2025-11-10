@@ -18,13 +18,7 @@ const Product = () => {
   const { productId } = useParams();
   const pageRef = useRef(null);
   
-  // Debugging logs
-  console.log('Product ID:', productId);
-  console.log('All Products:', all_product);
-  
   const product = all_product.find((e) => e.id === Number(productId));
-
-  console.log('Product:', product);
 
   useEffect(() => {
     if (product && pageRef.current) {

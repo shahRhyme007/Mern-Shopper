@@ -1,20 +1,21 @@
 import React, { useState, useContext, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Eye, EyeOff, Mail, Lock, User, ShoppingBag, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, User, ShoppingBag, CheckCircle, AlertCircle, Loader2, Shield, UserCheck } from 'lucide-react'
 import { ShopContext } from '../Context/EnhancedShopContext'
 import { Button } from '../Components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../Components/ui/card'
 
 const LoginSignup = () => {
   const [state, setState] = useState("Login")
+  const [loginType, setLoginType] = useState("user") // 'user' or 'admin'
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState({})
   const [agreeToTerms, setAgreeToTerms] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   
   const navigate = useNavigate()
-  const { login, signup, isAuthenticated } = useContext(ShopContext)
+  const { login, signup, isAuthenticated, isAdmin } = useContext(ShopContext)
 
   const [formData, setFormData] = useState({
     username: "",
@@ -64,10 +65,17 @@ const LoginSignup = () => {
     setErrors({})
     
     try {
-      const result = await login(formData.email, formData.password)
+      const result = await login(formData.email, formData.password, loginType === 'admin')
       
       if (result.success) {
-        navigate('/')
+        if (loginType === 'admin' && result.role === 'admin') {
+          // Redirect to admin dashboard
+          const adminDashboard = result.adminDashboard || 'http://localhost:5173'
+          window.location.href = adminDashboard
+        } else {
+          // Regular user login - redirect to home
+          navigate('/')
+        }
       } else {
         setErrors({ general: result.error })
       }
@@ -178,6 +186,65 @@ const LoginSignup = () => {
           </CardHeader>
 
           <CardContent className="p-6">
+            {/* Login Type Toggle - Only show for Login */}
+            {state === "Login" && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="mb-6"
+              >
+                <div className="flex items-center justify-center">
+                  <div className="bg-gray-100 p-1 rounded-lg flex">
+                    <motion.button
+                      type="button"
+                      onClick={() => setLoginType('user')}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                        loginType === 'user'
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <UserCheck className="w-4 h-4" />
+                      Customer
+                    </motion.button>
+                    <motion.button
+                      type="button"
+                      onClick={() => setLoginType('admin')}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                        loginType === 'admin'
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Shield className="w-4 h-4" />
+                      Admin
+                    </motion.button>
+                  </div>
+                </div>
+                {loginType === 'admin' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg"
+                  >
+                    <div className="flex items-center gap-2 text-blue-700">
+                      <Shield className="w-4 h-4 flex-shrink-0" />
+                      <span className="text-sm font-medium">Admin Access</span>
+                    </div>
+                    <p className="text-xs text-blue-600 mt-1">
+                      This will redirect you to the admin dashboard after successful login.
+                    </p>
+                  </motion.div>
+                )}
+              </motion.div>
+            )}
+
             {/* Display general errors */}
             <AnimatePresence>
               {errors.general && (

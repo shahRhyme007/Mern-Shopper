@@ -1,29 +1,107 @@
-import './AddProduct.css'
-import upload_area from "../../assets/upload_area.svg"
-import { useState } from 'react'
+import './AddProduct.css';
+import { useState } from 'react';
+import { API_ENDPOINTS } from "../../config/api";
+import { 
+  Package, 
+  DollarSign, 
+  Tag, 
+  ImagePlus, 
+  Save, 
+  AlertCircle,
+  Loader2,
+  X
+} from 'lucide-react';
 
 const AddProduct = () => {
-    // Adding a state variable for the upload image option so that the image is 
-    // displayed once uploaded
-    const [image, setImage] = useState(false)
+    // State for multiple image uploads (3-10 images)
+    const [images, setImages] = useState([])
     const [loading, setLoading] = useState(false)
     const [errors, setErrors] = useState({})
     
     //gathering product details 
     const [productDetails, setProductDetails] = useState({
         name: "",
-        image: "",
+        images: [],
         category: "women",
         new_price: "",
         old_price: ""
     });
 
     const imageHandler = (e) => {
-        setImage(e.target.files[0])
-        // Clear any previous image errors
-        if (errors.image) {
-            setErrors({...errors, image: ""})
+        const files = Array.from(e.target.files)
+        const currentImages = [...images]
+        
+        // Check if adding these files would exceed maximum limit
+        if (currentImages.length + files.length > 10) {
+            setErrors({...errors, images: `Maximum 10 images allowed. You can add ${10 - currentImages.length} more images.`})
+            return
         }
+        
+        // Validate file types and sizes
+        const validFiles = []
+        const invalidFiles = []
+        
+        files.forEach(file => {
+            if (file.type.startsWith('image/')) {
+                if (file.size <= 5 * 1024 * 1024) { // 5MB limit
+                    validFiles.push(file)
+                } else {
+                    invalidFiles.push(`${file.name} (file too large)`)
+                }
+            } else {
+                invalidFiles.push(`${file.name} (not an image)`)
+            }
+        })
+        
+        if (invalidFiles.length > 0) {
+            setErrors({...errors, images: `Invalid files: ${invalidFiles.join(', ')}`})
+            return
+        }
+        
+        setImages([...currentImages, ...validFiles])
+        // Clear any previous image errors
+        if (errors.images) {
+            setErrors({...errors, images: ""})
+        }
+    }
+
+    const removeImage = (index) => {
+        const updatedImages = images.filter((_, i) => i !== index)
+        setImages(updatedImages)
+    }
+
+    // Drag and drop handlers
+    const handleDragOver = (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        if (images.length < 10) {
+            e.currentTarget.classList.add('drag-over')
+        }
+    }
+
+    const handleDragLeave = (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        e.currentTarget.classList.remove('drag-over')
+    }
+
+    const handleDrop = (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        e.currentTarget.classList.remove('drag-over')
+        
+        if (images.length >= 10) return
+        
+        const files = Array.from(e.dataTransfer.files)
+        
+        // Create a mock event object for imageHandler
+        const mockEvent = {
+            target: {
+                files: files
+            }
+        }
+        
+        imageHandler(mockEvent)
     }
 
     // function for getting the information put in the input fields by the user
@@ -53,8 +131,10 @@ const AddProduct = () => {
             newErrors.old_price = "Old price must be a positive number"
         }
         
-        if (!image) {
-            newErrors.image = "Please select an image"
+        if (images.length < 3) {
+            newErrors.images = "Please upload at least 3 product images"
+        } else if (images.length > 10) {
+            newErrors.images = "Maximum 10 images allowed"
         }
         
         setErrors(newErrors)
@@ -72,39 +152,44 @@ const AddProduct = () => {
         setErrors({})
 
         try {
-        let responseData; 
-        // creating a copy of productDetails object
-        let product = productDetails; 
-
-        let formData = new FormData()
-        // we will append the img in the form data
-        formData.append("product", image)
-
-        // now we have to send the form data to the api(fetchapi) to send to backend
-        const uploadResponse = await fetch('http://localhost:4000/upload', {
-            method: 'POST',
-            headers: {
-                Accept: 'application/json',
-            },
-            body: formData,
-            })
+            // Upload all images first
+            const imageUrls = []
             
-            responseData = await uploadResponse.json()
-        
-            // Check if upload was successful
-            if (!responseData.success) {
-                throw new Error(responseData.message || "Failed to upload image")
+            for (let i = 0; i < images.length; i++) {
+                const image = images[i]
+                const formData = new FormData()
+                formData.append("product", image)
+
+                const uploadResponse = await fetch(API_ENDPOINTS.UPLOAD, {
+                    method: 'POST',
+                    headers: {
+                        Accept: 'application/json',
+                    },
+                    body: formData,
+                })
+                
+                const responseData = await uploadResponse.json()
+                
+                if (!responseData.success) {
+                    throw new Error(responseData.message || `Failed to upload image ${i + 1}`)
+                }
+                
+                imageUrls.push(responseData.image_url)
             }
             
             // Prepare product data with correct data types
-            product.image = responseData.image_url
-            product.new_price = parseFloat(product.new_price)
-            product.old_price = parseFloat(product.old_price)
+            const product = {
+                ...productDetails,
+                images: imageUrls,
+                image: imageUrls[0], // Keep first image as main for backward compatibility
+                new_price: parseFloat(productDetails.new_price),
+                old_price: parseFloat(productDetails.old_price)
+            }
             
             console.log("Sending product data:", product);
             
-            // we received the image url now we can send it to the app product endpoint
-        const addProductResponse = await fetch('http://localhost:4000/addproduct', {
+            // Send product data to backend
+            const addProductResponse = await fetch(API_ENDPOINTS.ADD_PRODUCT, {
                 method: 'POST',
                 headers: {
                     Accept: 'application/json',
@@ -116,16 +201,16 @@ const AddProduct = () => {
             const addProductData = await addProductResponse.json()
             
             if (addProductData.success) {
-                alert("Product Added Successfully")
+                alert(`Product Added Successfully with ${imageUrls.length} images!`)
                 // Reset form
                 setProductDetails({
                     name: "",
-                    image: "",
+                    images: [],
                     category: "women",
                     new_price: "",
                     old_price: ""
                 })
-                setImage(false)
+                setImages([])
                 setErrors({})
             } else {
                 throw new Error(addProductData.errors || "Failed to add product")
@@ -141,115 +226,338 @@ const AddProduct = () => {
     }
 
   return (
-    <div className="add-product">
-            {/* Display general errors */}
-            {errors.general && (
-                <div style={{ color: 'red', marginBottom: '10px', padding: '10px', backgroundColor: '#fee', borderRadius: '4px' }}>
-                    {errors.general}
-                </div>
-            )}
-            
-        {/* product name */}
-        <div className="addproduct-itemfield">
-            <p>Product title</p>
-                <input 
+    <div className="modern-add-product">
+      {/* Header */}
+      <div className="add-product-header">
+        <div className="header-content">
+          <h1>
+            <Package size={24} />
+            Add New Product
+          </h1>
+          <p>Create a new product for your store inventory</p>
+        </div>
+        {loading && (
+          <div className="loading-indicator">
+            <Loader2 size={20} className="animate-spin" />
+            Processing...
+          </div>
+        )}
+      </div>
+
+      {/* Error Alert */}
+      {errors.general && (
+        <div className="alert alert-error">
+          <AlertCircle size={20} />
+          <div>
+            <strong>Error</strong>
+            <p>{errors.general}</p>
+          </div>
+          <button 
+            onClick={() => setErrors({...errors, general: ''})}
+            className="alert-close"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
+      <div className="add-product-content">
+        {/* Main Form */}
+        <div className="add-product-form">
+          {/* Product Information Card */}
+          <div className="form-card">
+            <div className="card-header">
+              <h3>
+                <Package size={20} />
+                Product Information
+              </h3>
+            </div>
+            <div className="card-content">
+              {/* Product Name */}
+              <div className="form-group">
+                <label htmlFor="name">Product Name *</label>
+                <div className="input-wrapper">
+                  <input 
+                    id="name"
                     value={productDetails.name} 
                     onChange={changeHandler} 
                     type="text" 
                     name="name" 
-                    placeholder="Type here"
+                    placeholder="Enter product name"
                     disabled={loading}
-                    style={errors.name ? { borderColor: 'red' } : {}}
-                />
-                {errors.name && <span style={{ color: 'red', fontSize: '12px' }}>{errors.name}</span>}
-        </div>
-
-        {/* product Price */}
-        <div className="addproduct-price">
-            <div className="addproduct-itemfield">
-                <p>Price</p>
-                    <input 
-                        value={productDetails.old_price} 
-                        onChange={changeHandler} 
-                        type="number" 
-                        name="old_price" 
-                        placeholder="Type here"
-                        disabled={loading}
-                        min="0"
-                        step="0.01"
-                        style={errors.old_price ? { borderColor: 'red' } : {}}
-                    />
-                    {errors.old_price && <span style={{ color: 'red', fontSize: '12px' }}>{errors.old_price}</span>}
-            </div>
-            <div className="addproduct-itemfield">
-                <p>Offer Price</p>
-                    <input 
-                        value={productDetails.new_price} 
-                        onChange={changeHandler} 
-                        type="number" 
-                        name="new_price" 
-                        placeholder="Type here"
-                        disabled={loading}
-                        min="0"
-                        step="0.01"
-                        style={errors.new_price ? { borderColor: 'red' } : {}}
-                    />
-                    {errors.new_price && <span style={{ color: 'red', fontSize: '12px' }}>{errors.new_price}</span>}
+                    className={errors.name ? 'error' : ''}
+                  />
                 </div>
-            </div>
-            
-            {/* product category */}
-        <div className="addproduct-itemfield">
-            <p>Product Category</p>
-                <select 
+                {errors.name && (
+                  <div className="field-error">
+                    <AlertCircle size={14} />
+                    {errors.name}
+                  </div>
+                )}
+              </div>
+
+              {/* Category */}
+              <div className="form-group">
+                <label htmlFor="category">Category *</label>
+                <div className="input-wrapper">
+                  <Tag size={20} className="input-icon" />
+                  <select 
+                    id="category"
                     value={productDetails.category} 
                     onChange={changeHandler} 
                     name="category" 
-                    className="add-product-selector"
                     disabled={loading}
-                >
-                <option value="women">Women</option>
-                <option value="men">Men</option>
-                <option value="kid">Kid</option>
-            </select>
-        </div>
+                  >
+                    <option value="women">Women</option>
+                    <option value="men">Men</option>
+                    <option value="kid">Kid</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
 
-        {/* image upload of the product */}
-        <div className="addproduct-itemfield">
-            <label htmlFor="file-input">
-                    {/* if image selected show the selected image otherwise show the upload area image */}
-                    <img 
-                        src={image ? URL.createObjectURL(image) : upload_area} 
-                        className='addproduct-thumbnail-img' 
-                        alt="" 
-                        style={errors.image ? { border: '2px solid red' } : {}}
+          {/* Pricing Card */}
+          <div className="form-card">
+            <div className="card-header">
+              <h3>
+                <DollarSign size={20} />
+                Pricing
+              </h3>
+            </div>
+            <div className="card-content">
+              <div className="price-grid">
+                {/* Regular Price */}
+                <div className="form-group">
+                  <label htmlFor="old_price">Regular Price *</label>
+                  <div className="input-wrapper">
+                    <DollarSign size={20} className="input-icon" />
+                    <input 
+                      id="old_price"
+                      value={productDetails.old_price} 
+                      onChange={changeHandler} 
+                      type="number" 
+                      name="old_price" 
+                      placeholder="0.00"
+                      disabled={loading}
+                      min="0"
+                      step="0.01"
+                      className={errors.old_price ? 'error' : ''}
                     />
-            </label>
-            {/* hidden is used to hide the input field . so the img is just shown */}
-                <input 
-                    onChange={imageHandler} 
-                    type="file" 
-                    name='image' 
-                    id="file-input" 
-                    hidden
-                    disabled={loading}
-                    accept="image/*"
-                />
-                {errors.image && <div style={{ color: 'red', fontSize: '12px', marginTop: '5px' }}>{errors.image}</div>}
+                  </div>
+                  {errors.old_price && (
+                    <div className="field-error">
+                      <AlertCircle size={14} />
+                      {errors.old_price}
+                    </div>
+                  )}
+                </div>
+
+                {/* Sale Price */}
+                <div className="form-group">
+                  <label htmlFor="new_price">Sale Price *</label>
+                  <div className="input-wrapper">
+                    <DollarSign size={20} className="input-icon" />
+                    <input 
+                      id="new_price"
+                      value={productDetails.new_price} 
+                      onChange={changeHandler} 
+                      type="number" 
+                      name="new_price" 
+                      placeholder="0.00"
+                      disabled={loading}
+                      min="0"
+                      step="0.01"
+                      className={errors.new_price ? 'error' : ''}
+                    />
+                  </div>
+                  {errors.new_price && (
+                    <div className="field-error">
+                      <AlertCircle size={14} />
+                      {errors.new_price}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Price Difference Display */}
+              {productDetails.old_price && productDetails.new_price && (
+                <div className="price-summary">
+                  <div className="discount-info">
+                    <span className="discount-label">Discount:</span>
+                    <span className="discount-amount">
+                      ${(parseFloat(productDetails.old_price) - parseFloat(productDetails.new_price)).toFixed(2)}
+                      ({Math.round(((parseFloat(productDetails.old_price) - parseFloat(productDetails.new_price)) / parseFloat(productDetails.old_price)) * 100)}% off)
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* add button */}
-            <button 
-                onClick={() => Add_Product()} 
-                className="addproduct-btn"
-                disabled={loading}
-                style={{ 
-                    opacity: loading ? 0.6 : 1,
-                    cursor: loading ? 'not-allowed' : 'pointer'
-                }}
+        {/* Image Upload Card */}
+        <div className="upload-card">
+          <div className="card-header">
+            <h3>
+              <ImagePlus size={20} />
+              Product Images ({images.length}/10)
+            </h3>
+            <span className="image-requirement">
+              {images.length < 3 ? `${3 - images.length} more required` : 'Complete'}
+            </span>
+          </div>
+          <div className="card-content">
+            {/* Upload Area */}
+            <div 
+              className={`upload-area ${errors.images ? 'error' : ''} ${images.length >= 10 ? 'disabled' : ''}`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
             >
-                {loading ? "ADDING..." : "ADD"}
-            </button>
+              <label htmlFor="file-input" className="upload-label">
+                <div className="upload-content">
+                  <div className="upload-placeholder">
+                    <ImagePlus size={48} />
+                    <h4>Upload Product Images</h4>
+                    <p>Click here or drag and drop multiple images</p>
+                    <span className="file-types">PNG, JPG, JPEG up to 5MB each</span>
+                    <span className="upload-requirement">
+                      Minimum 3 images, Maximum 10 images
+                    </span>
+                  </div>
+                </div>
+              </label>
+              <input 
+                onChange={imageHandler} 
+                type="file" 
+                name='images' 
+                id="file-input" 
+                hidden
+                disabled={loading || images.length >= 10}
+                accept="image/*"
+                multiple
+              />
+            </div>
+            
+            {/* Error Display */}
+            {errors.images && (
+              <div className="field-error">
+                <AlertCircle size={14} />
+                {errors.images}
+              </div>
+            )}
+            
+            {/* Image Gallery */}
+            {images.length > 0 && (
+              <div className="image-gallery">
+                <h4>Selected Images ({images.length})</h4>
+                <div className="image-grid">
+                  {images.map((image, index) => (
+                    <div key={index} className="image-item">
+                      <div className="image-preview">
+                        <img 
+                          src={URL.createObjectURL(image)} 
+                          alt={`Product ${index + 1}`}
+                          className="preview-image"
+                        />
+                        <div className="image-overlay">
+                          <button 
+                            type="button"
+                            onClick={() => removeImage(index)}
+                            className="remove-image-btn"
+                            disabled={loading}
+                            title="Remove image"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                        {index === 0 && (
+                          <div className="main-image-badge">Main</div>
+                        )}
+                      </div>
+                      <div className="image-info">
+                        <span className="image-name">{image.name}</span>
+                        <span className="image-size">
+                          {(image.size / 1024 / 1024).toFixed(2)} MB
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Add More Button */}
+                {images.length < 10 && (
+                  <button 
+                    type="button"
+                    onClick={() => document.getElementById('file-input').click()}
+                    className="add-more-btn"
+                    disabled={loading}
+                  >
+                    <ImagePlus size={16} />
+                    Add More Images ({images.length}/10)
+                  </button>
+                )}
+              </div>
+            )}
+            
+            {/* Progress Indicator */}
+            <div className="upload-progress">
+              <div className="progress-bar">
+                <div 
+                  className="progress-fill" 
+                  style={{ width: `${Math.min((images.length / 3) * 100, 100)}%` }}
+                ></div>
+              </div>
+              <div className="progress-text">
+                {images.length < 3 
+                  ? `${images.length}/3 minimum required` 
+                  : `${images.length}/10 images selected`
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="form-actions">
+        <button 
+          type="button"
+          onClick={() => {
+            setProductDetails({
+              name: "",
+              images: [],
+              category: "women",
+              new_price: "",
+              old_price: ""
+            });
+            setImages([]);
+            setErrors({});
+          }}
+          className="btn btn-secondary"
+          disabled={loading}
+        >
+          Reset Form
+        </button>
+        <button 
+          onClick={Add_Product} 
+          className="btn btn-primary"
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <Loader2 size={18} className="animate-spin" />
+              Adding Product...
+            </>
+          ) : (
+            <>
+              <Save size={18} />
+              Add Product
+            </>
+          )}
+        </button>
+      </div>
     </div>
   )
 }

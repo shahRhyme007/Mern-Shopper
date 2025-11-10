@@ -28,18 +28,23 @@ const cors = require("cors");
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const nodemailer = require('nodemailer');
 const { v4: uuidv4 } = require('uuid');
+const axios = require('axios');
+const Replicate = require("replicate");
+
+// Import node-fetch polyfill
+// Removed node-fetch dependency - virtual try-on now runs client-side
 
 // Security middleware
 app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
-// Rate limiting
+// Rate limiting - More lenient for development
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100 // limit each IP to 100 requests per windowMs
+    max: 1000 // increased limit for virtual try-on requests
 });
-app.use(limiter);
+app.use('/api/', limiter); // Only apply to API routes, not static files
 
 // Stricter rate limiting for auth endpoints
 const authLimiter = rateLimit({
@@ -53,9 +58,11 @@ const corsOptions = {
         process.env.FRONTEND_URL,
         process.env.ADMIN_URL,
         'http://localhost:3000',
+        'http://localhost:3001', // Added for frontend running on port 3001
         'http://localhost:5173',
         'http://127.0.0.1:5173',
-        'http://127.0.0.1:3000'
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:3001' // Added for frontend running on port 3001
     ],
     credentials: true,
     optionsSuccessStatus: 200
@@ -188,8 +195,13 @@ const upload = multer({
     }
 });
 
-// creating upload endpoint for images 
-app.use('/images', express.static('upload/images'));
+// creating upload endpoint for images with CORS headers
+app.use('/images', (req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    next();
+}, express.static('upload/images'));
 
 app.post("/upload", upload.single('product'), (req, res) => {
     if (!req.file) {
@@ -225,6 +237,17 @@ const Product = mongoose.model("Product", {
     image: {
         type: String,
         required: true,
+    },
+    // Multiple images support (3-10 images)
+    images: {
+        type: [String],
+        default: [],
+        validate: {
+            validator: function(v) {
+                return v.length >= 0 && v.length <= 10;
+            },
+            message: 'Product must have between 0 and 10 images'
+        }
     },
     category: {
         type: String,
@@ -645,6 +668,7 @@ app.post('/addproduct', async (req, res) => {
             id: id, 
             name: req.body.name, 
             image: req.body.image, 
+            images: req.body.images || [req.body.image], // Support multiple images, fallback to single image array
             category: req.body.category, 
             new_price: req.body.new_price, 
             old_price: req.body.old_price, 
@@ -694,18 +718,20 @@ app.post('/removeproduct', [
     }
 });
 
-// Update product details (old_price, new_price, category)
+// Update product details (name, old_price, new_price, category)
 app.post('/updateproduct', [
     body('id').isInt({ min: 1 }).withMessage('Product ID must be a positive integer'),
+    body('name').optional().isLength({ min: 1, max: 200 }).withMessage('Product name must be between 1 and 200 characters'),
     body('old_price').optional().isFloat({ min: 0 }).withMessage('Old price must be a positive number'),
     body('new_price').optional().isFloat({ min: 0 }).withMessage('New price must be a positive number'),
     body('category').optional().isIn(['men', 'women', 'kid']).withMessage('Category must be men, women, or kid')
 ], handleValidationErrors, async (req, res) => {
     try {
-        const { id, old_price, new_price, category } = req.body;
+        const { id, name, old_price, new_price, category } = req.body;
         
         // Build update object with only provided fields
         const updateFields = {};
+        if (name !== undefined) updateFields.name = name.trim();
         if (old_price !== undefined) updateFields.old_price = old_price;
         if (new_price !== undefined) updateFields.new_price = new_price;
         if (category !== undefined) updateFields.category = category;
@@ -714,7 +740,7 @@ app.post('/updateproduct', [
         if (Object.keys(updateFields).length === 0) {
             return res.status(400).json({
                 success: false,
-                errors: "At least one field (old_price, new_price, or category) must be provided"
+                errors: "At least one field (name, old_price, new_price, or category) must be provided"
             });
         }
         
@@ -783,6 +809,12 @@ const Users = mongoose.model('Users', {
         required: true,
         minLength: 6
     }, 
+    // User role for admin functionality
+    role: {
+        type: String,
+        enum: ['user', 'admin'],
+        default: 'user'
+    },
     cartData: {
         type: Object,
         default: {}
@@ -906,9 +938,18 @@ app.post('/login', authLimiter, loginValidation, handleValidationErrors, async (
         if (user) {
             const passCompare = await bcrypt.compare(req.body.password, user.password);
             if (passCompare) {
+                // Check if this is a regular user (not admin)
+                if (user.role === 'admin') {
+                    return res.status(403).json({ 
+                        success: false, 
+                        errors: "Admin users should use admin login" 
+                    });
+                }
+
                 const data = {
                     user: {
-                        id: user.id
+                        id: user.id,
+                        role: user.role || 'user'
                     }
                 };
                 const token = jwt.sign(data, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
@@ -916,7 +957,7 @@ app.post('/login', authLimiter, loginValidation, handleValidationErrors, async (
                 // Update last login
                 await Users.findByIdAndUpdate(user._id, { lastLogin: new Date() });
                 
-                res.json({ success: true, token });
+                res.json({ success: true, token, role: user.role || 'user' });
             }
             else {
                 res.status(400).json({ success: false, errors: "Wrong Password" });
@@ -930,6 +971,55 @@ app.post('/login', authLimiter, loginValidation, handleValidationErrors, async (
         res.status(500).json({
             success: false,
             errors: "Internal server error during login"
+        });
+    }
+});
+
+// Creating endpoint for admin login
+app.post('/admin/login', authLimiter, loginValidation, handleValidationErrors, async (req, res) => {
+    try {
+        let user = await Users.findOne({ email: req.body.email });
+        if (user) {
+            const passCompare = await bcrypt.compare(req.body.password, user.password);
+            if (passCompare) {
+                // Check if user is admin
+                if (user.role !== 'admin') {
+                    return res.status(403).json({ 
+                        success: false, 
+                        errors: "Access denied. Admin privileges required." 
+                    });
+                }
+
+                const data = {
+                    user: {
+                        id: user.id,
+                        role: user.role
+                    }
+                };
+                const token = jwt.sign(data, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
+                
+                // Update last login
+                await Users.findByIdAndUpdate(user._id, { lastLogin: new Date() });
+                
+                res.json({ 
+                    success: true, 
+                    token, 
+                    role: user.role,
+                    adminDashboard: `${process.env.ADMIN_URL || 'http://localhost:5173'}`
+                });
+            }
+            else {
+                res.status(400).json({ success: false, errors: "Wrong Password" });
+            }    
+        }
+        else {
+            res.status(400).json({ success: false, errors: "Wrong Email Id" });
+        }
+    } catch (error) {
+        console.error('Admin login error:', error);
+        res.status(500).json({
+            success: false,
+            errors: "Internal server error during admin login"
         });
     }
 });
@@ -1758,6 +1848,12 @@ app.post('/create-payment-intent', fetchUser, validateUser, [
 app.post('/webhook/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
     const sig = req.headers['stripe-signature'];
     
+    // Check if webhook secret is configured
+    if (!process.env.STRIPE_WEBHOOK_SECRET) {
+        console.log('⚠️ Webhook received but STRIPE_WEBHOOK_SECRET not configured');
+        return res.status(400).send('Webhook secret not configured');
+    }
+    
     try {
         const event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
         
@@ -2055,6 +2151,131 @@ app.post('/promo/create', [
             errors: 'Failed to create promo code'
         });
     }
+});
+
+// ================== VIRTUAL TRY-ON ==================
+// Note: Virtual try-on now runs completely client-side using advanced Canvas API
+// No external API calls needed - face-swap processing handled in browser
+
+// ================== REAL AI FACE SWAP ==================
+// Using Replicate API for realistic face swapping
+
+// Initialize Replicate
+const replicate = new Replicate({
+  auth: process.env.REPLICATE_API_TOKEN || "", // Free $10/month credit
+});
+
+app.post('/api/ai-face-swap', async (req, res) => {
+  try {
+    const { userImageBase64, productImageBase64 } = req.body;
+
+    if (!userImageBase64 || !productImageBase64) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Both user image and product image are required' 
+      });
+    }
+
+    console.log('🎭 Starting AI face swap with Replicate...');
+
+    // Convert base64 to data URLs for Replicate
+    const userImageDataUrl = userImageBase64.startsWith('data:') 
+      ? userImageBase64 
+      : `data:image/jpeg;base64,${userImageBase64}`;
+    
+    const productImageDataUrl = productImageBase64.startsWith('data:') 
+      ? productImageBase64 
+      : `data:image/jpeg;base64,${productImageBase64}`;
+
+    let output;
+    let modelUsed = '';
+
+    // Try multiple face swap models for best results
+    try {
+      // Primary model: lucataco/modelscope-facefusion
+      console.log('🔥 Trying lucataco/modelscope-facefusion...');
+      output = await replicate.run(
+        "lucataco/modelscope-facefusion",
+        {
+          input: {
+            source_image: userImageDataUrl,
+            target_image: productImageDataUrl
+          }
+        }
+      );
+      modelUsed = 'modelscope-facefusion';
+    } catch (error) {
+      console.log('❌ Primary model failed, trying backup...');
+      
+      try {
+        // Backup model: fofr/become-image
+        console.log('🔥 Trying fofr/become-image...');
+        output = await replicate.run(
+          "fofr/become-image",
+          {
+            input: {
+              image: productImageDataUrl,
+              image_to_become: userImageDataUrl,
+              prompt: "professional photo, high quality",
+              strength: 0.8
+            }
+          }
+        );
+        modelUsed = 'become-image';
+      } catch (secondError) {
+        console.log('❌ Backup model also failed, trying third option...');
+        
+        // Third option: bytedance/flux-pulid (Face identity preservation)
+        output = await replicate.run(
+          "bytedance/flux-pulid",
+          {
+            input: {
+              main_face_image: userImageDataUrl,
+              prompt: "professional headshot photo of a person wearing the target clothing",
+              width: 1024,
+              height: 1024,
+              num_inference_steps: 30,
+              guidance_scale: 4.0,
+              id_scale: 0.8
+            }
+          }
+        );
+        modelUsed = 'flux-pulid';
+      }
+    }
+
+    if (output && (Array.isArray(output) ? output.length > 0 : output)) {
+      // Handle different output formats
+      const outputUrl = Array.isArray(output) ? output[0] : output;
+      
+      // Convert output URL to base64 for frontend
+      const fetch = (await import('node-fetch')).default;
+      const imageResponse = await fetch(outputUrl);
+      const imageBuffer = await imageResponse.buffer();
+      const resultBase64 = imageBuffer.toString('base64');
+
+      console.log(`✅ Face swap completed successfully using ${modelUsed}`);
+      
+      res.json({
+        success: true,
+        resultImage: `data:image/png;base64,${resultBase64}`,
+        message: `Face swap completed successfully using ${modelUsed}!`,
+        modelUsed: modelUsed
+      });
+    } else {
+      throw new Error('No output received from any face swap model');
+    }
+
+  } catch (error) {
+    console.error('❌ Face swap error:', error);
+    
+    // Return a graceful error response
+    res.status(500).json({
+      success: false,
+      error: 'Face swap failed. Please try again with different images.',
+      details: error.message
+    });
+  }
 });
 
 // ================== ANALYTICS & REPORTING APIs ==================

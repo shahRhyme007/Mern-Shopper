@@ -176,7 +176,18 @@ const ShopContextProvider = (props) => {
         setUser(null);
         setCartItems({});
         setWishlist([]);
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('adminDashboard');
     }, []);
+
+    // Helper functions for admin authentication
+    const isAdmin = () => {
+        return localStorage.getItem('userRole') === 'admin';
+    };
+
+    const getAdminDashboardUrl = () => {
+        return localStorage.getItem('adminDashboard') || 'http://localhost:5173';
+    };
 
     // Load user profile
     const fetchUserProfile = useCallback(async () => {
@@ -196,9 +207,10 @@ const ShopContextProvider = (props) => {
     }, [makeAPICall, logout]);
 
     // User authentication functions
-    const login = async (email, password) => {
+    const login = async (email, password, isAdmin = false) => {
         try {
-            const data = await makeAPICall('/login', {
+            const endpoint = isAdmin ? '/admin/login' : '/login';
+            const data = await makeAPICall(endpoint, {
                 method: 'POST',
                 body: JSON.stringify({ email, password })
             });
@@ -206,10 +218,28 @@ const ShopContextProvider = (props) => {
             if (data.success) {
                 setAuthToken(data.token);
                 setIsAuthenticated(true);
+                
+                // Store user role and admin dashboard URL if admin
+                if (data.role) {
+                    localStorage.setItem('userRole', data.role);
+                }
+                if (data.adminDashboard) {
+                    localStorage.setItem('adminDashboard', data.adminDashboard);
+                }
+                
                 await fetchUserProfile();
-                await fetchUserCart();
-                await fetchUserWishlist();
-                return { success: true };
+                
+                // Only fetch cart and wishlist for regular users
+                if (!isAdmin || data.role !== 'admin') {
+                    await fetchUserCart();
+                    await fetchUserWishlist();
+                }
+                
+                return { 
+                    success: true, 
+                    role: data.role,
+                    adminDashboard: data.adminDashboard 
+                };
             } else {
                 return { success: false, error: data.errors };
             }
@@ -478,6 +508,10 @@ const ShopContextProvider = (props) => {
         login,
         signup,
         logout,
+        
+        // Admin functionality
+        isAdmin,
+        getAdminDashboardUrl,
         
         // Wishlist functionality
         wishlist,

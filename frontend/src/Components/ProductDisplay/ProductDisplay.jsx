@@ -17,14 +17,15 @@ import {
   Zap,
   Award,
   Clock,
-  Camera,
-  Upload,
-  X,
-  Info,
-  Sparkles
+  ZoomIn,
+  Ruler,
+  GitCompare,
+  CheckCircle,
+  MapPin
 } from 'lucide-react'
 import { ShopContext } from '../../Context/EnhancedShopContext'
 import './ProductDisplay.css'
+// Removed unused star icons - using Lucide icons instead
 
 // Register GSAP plugins
 gsap.registerPlugin(ScrollTrigger)
@@ -38,13 +39,15 @@ const ProductDisplay = (props) => {
   const [quantity, setQuantity] = useState(1)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
+  const [isZoomed, setIsZoomed] = useState(false)
+  const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 })
+  const [showSizeGuide, setShowSizeGuide] = useState(false)
+  const [showComparison, setShowComparison] = useState(false)
+  const [deliveryDate, setDeliveryDate] = useState('')
+  const [stockLevel] = useState(Math.floor(Math.random() * 50) + 10) // Simulated stock
+  const [isInStock] = useState(true)
   
-  // Virtual fitting states
-  const [showVirtualFitting, setShowVirtualFitting] = useState(false)
-  const [uploadedPhoto, setUploadedPhoto] = useState(null)
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [showTips, setShowTips] = useState(false)
-  const [fittingResult, setFittingResult] = useState(null)
+
   
   // Refs for animations
   const containerRef = useRef(null)
@@ -52,15 +55,17 @@ const ProductDisplay = (props) => {
   const detailsRef = useRef(null)
   const priceRef = useRef(null)
   const buttonRef = useRef(null)
-  const fileInputRef = useRef(null)
+
   
-  // Product images (using the same image multiple times as placeholder)
-  const productImages = [
-    product.image,
-    product.image,
-    product.image,
-    product.image
-  ]
+  // Product images - support both single image and multiple images array
+  const productImages = React.useMemo(() => {
+    // If product has images array (new format), use it
+    if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+      return product.images.filter(Boolean)
+    }
+    // Fallback to single image (old format) for backward compatibility
+    return product.image ? [product.image] : []
+  }, [product.image, product.images])
   
   // Product features
   const features = [
@@ -69,8 +74,40 @@ const ProductDisplay = (props) => {
     { icon: RotateCcw, text: '30-day return policy' }
   ]
   
-  // Sizes
-  const sizes = ['S', 'M', 'L', 'XL', 'XXL']
+  // Sizes with availability
+  const sizes = [
+    { size: 'S', available: true, lowStock: false },
+    { size: 'M', available: true, lowStock: true },
+    { size: 'L', available: true, lowStock: false },
+    { size: 'XL', available: true, lowStock: false },
+    { size: 'XXL', available: stockLevel > 5, lowStock: stockLevel <= 5 }
+  ]
+
+  // Calculate delivery date
+  useEffect(() => {
+    const today = new Date()
+    const delivery = new Date(today.getTime() + (Math.floor(Math.random() * 3) + 2) * 24 * 60 * 60 * 1000)
+    setDeliveryDate(delivery.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      month: 'short', 
+      day: 'numeric' 
+    }))
+  }, [])
+
+  // Enhanced image zoom functionality
+  const handleMouseMove = (e) => {
+    if (!isZoomed) return
+    
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = ((e.clientX - rect.left) / rect.width) * 100
+    const y = ((e.clientY - rect.top) / rect.height) * 100
+    
+    setZoomPosition({ x, y })
+  }
+
+  const handleImageZoom = () => {
+    setIsZoomed(!isZoomed)
+  }
   
   useEffect(() => {
     // Simple setup without animations to prevent tilted appearance
@@ -194,52 +231,7 @@ const ProductDisplay = (props) => {
     ))
   }
 
-  // Virtual fitting handlers
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0]
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        setUploadedPhoto(e.target.result)
-      }
-      reader.readAsDataURL(file)
-    }
-  }
 
-  const handleTryDress = () => {
-    if (!uploadedPhoto) return
-    
-    setIsProcessing(true)
-    
-    // Simulate AI processing time for virtual try-on
-    setTimeout(() => {
-      // Create a more realistic virtual try-on result
-      // In a real implementation, this would use AI to blend the person's face/body with the dress
-      setFittingResult({
-        originalPhoto: uploadedPhoto,
-        fittedPhoto: uploadedPhoto, // This would be the AI-generated image with the dress fitted on the person
-        confidence: 92,
-        recommendations: [
-          "Great fit! This size looks perfect on you.",
-          "The color complements your skin tone beautifully.",
-          "Consider pairing with dark jeans for a casual look.",
-          "This style suits your body type well."
-        ],
-        // Simulate that we've processed their photo with the dress
-        isVirtualTryOn: true
-      })
-      setIsProcessing(false)
-    }, 3000)
-  }
-
-  const resetVirtualFitting = () => {
-    setUploadedPhoto(null)
-    setFittingResult(null)
-    setIsProcessing(false)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
-  }
 
   return (
     <div className="modern-product-container" ref={containerRef}>
@@ -269,233 +261,88 @@ const ProductDisplay = (props) => {
             
             {/* Main Image */}
             <div className="main-image-container">
-            <motion.img
-              className="main-product-image"
-              src={productImages[selectedImageIndex]}
-              alt={product.name}
-              onError={handleImageError}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
-            />
-            
-            {/* Image Navigation */}
-            <button 
-              className="image-nav prev"
-              onClick={() => handleImageSelect(selectedImageIndex > 0 ? selectedImageIndex - 1 : productImages.length - 1)}
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-            <button 
-              className="image-nav next"
-              onClick={() => handleImageSelect(selectedImageIndex < productImages.length - 1 ? selectedImageIndex + 1 : 0)}
-            >
-              <ChevronRight className="w-6 h-6" />
-            </button>
-            
-            {/* Quick Actions */}
-            <div className="quick-actions">
-              <motion.button
-                className="wishlist-btn"
-                onClick={handleWishlistToggle}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+              <motion.div
+                className={`image-wrapper ${isZoomed ? 'zoomed' : ''}`}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={() => setIsZoomed(false)}
               >
-                <Heart className={`w-5 h-5 ${isInWishlist(product.id) ? 'text-red-500 fill-current' : 'text-gray-400'}`} />
-              </motion.button>
-              <motion.button
-                className="share-btn"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-              >
-                <Share2 className="w-5 h-5 text-gray-400" />
-              </motion.button>
-            </div>
-          </div>
-          </div>
-
-          {/* Virtual Fitting Section - Below Main Image */}
-          <div className="virtual-fitting-below-image">
-            <div className="virtual-fitting-header-below">
-              <div className="header-content-below">
-                <Sparkles className="w-5 h-5 text-purple-500" />
-                <h4>Virtual Try-On</h4>
-                <span className="beta-badge-below">AI</span>
-              </div>
-            </div>
-
-            {!showVirtualFitting ? (
-              <motion.button
-                className="try-dress-btn-below"
-                onClick={() => setShowVirtualFitting(true)}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Camera className="w-4 h-4" />
-                Try This Dress
-              </motion.button>
-            ) : (
-              <div className="virtual-fitting-interface-below">
-                {/* Upload Section */}
-                {!fittingResult && (
-                  <div className="upload-section-below">
-                    <div className="upload-area-below">
-                      {!uploadedPhoto ? (
-                        <div className="upload-placeholder-below">
-                          <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            onChange={handleFileUpload}
-                            className="hidden"
-                          />
-                          <motion.div
-                            className="upload-content-below"
-                            whileHover={{ scale: 1.02 }}
-                            onClick={() => fileInputRef.current?.click()}
-                          >
-                            <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                            <span className="upload-text-below">Upload Photo</span>
-                            <span className="file-types-below">JPG, PNG</span>
-                          </motion.div>
-                        </div>
-                      ) : (
-                        <div className="uploaded-photo-below">
-                          <img src={uploadedPhoto} alt="Uploaded" />
-                          <button
-                            className="remove-photo-below"
-                            onClick={resetVirtualFitting}
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Tips Section */}
-                    <div className="tips-section-below">
-                      <button
-                        className="tips-toggle-below"
-                        onClick={() => setShowTips(!showTips)}
-                      >
-                        <Info className="w-3 h-3" />
-                        Tips
-                      </button>
-                      
-                      <AnimatePresence>
-                        {showTips && (
-                          <motion.div
-                            className="tips-content-below"
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                          >
-                            <ul>
-                              <li>• Front-facing photo works best</li>
-                              <li>• Good lighting recommended</li>
-                              <li>• Stand straight, arms at sides</li>
-                            </ul>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="fitting-actions-below">
-                      <motion.button
-                        className="try-button-below"
-                        onClick={handleTryDress}
-                        disabled={!uploadedPhoto || isProcessing}
-                        whileHover={{ scale: uploadedPhoto ? 1.02 : 1 }}
-                        whileTap={{ scale: uploadedPhoto ? 0.98 : 1 }}
-                      >
-                        {isProcessing ? (
-                          <>
-                            <div className="processing-spinner-below" />
-                            Processing...
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="w-3 h-3" />
-                            Try It On
-                          </>
-                        )}
-                      </motion.button>
-                      
-                      <button
-                        className="cancel-button-below"
-                        onClick={() => setShowVirtualFitting(false)}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Results Section */}
-                {fittingResult && (
-                  <motion.div
-                    className="fitting-results-below"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.5 }}
+                <motion.img
+                  className="main-product-image"
+                  src={productImages[selectedImageIndex]}
+                  alt={product.name}
+                  onError={handleImageError}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                  style={isZoomed ? {
+                    transform: `scale(2.5)`,
+                    transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`,
+                    cursor: 'zoom-out'
+                  } : { cursor: 'zoom-in' }}
+                  onClick={handleImageZoom}
+                />
+                
+                {/* Zoom Indicator */}
+                {!isZoomed && (
+                  <motion.div 
+                    className="zoom-indicator"
+                    initial={{ opacity: 0 }}
+                    whileHover={{ opacity: 1 }}
+                    transition={{ duration: 0.2 }}
                   >
-                    <div className="results-header-below">
-                      <h5>Virtual Try-On Result</h5>
-                      <span className="confidence-score-below">
-                        {fittingResult.confidence}% Match
-                      </span>
-                    </div>
-
-                    <div className="results-comparison-below">
-                      <div className="comparison-item-below">
-                        <img src={fittingResult.originalPhoto} alt="Original" />
-                        <span>Before</span>
-                      </div>
-                      <div className="comparison-arrow-below">→</div>
-                      <div className="comparison-item-below">
-                        <div className="virtual-result-image-below">
-                          <img src={fittingResult.fittedPhoto} alt="With Dress" />
-                          <div className="dress-overlay-below">
-                            <img src={product.image} alt="Dress overlay" className="dress-overlay-img-below" />
-                          </div>
-                        </div>
-                        <span>With Dress</span>
-                      </div>
-                    </div>
-
-                    <div className="ai-recommendations-below">
-                      <h6>AI Recommendations</h6>
-                      <ul>
-                        {fittingResult.recommendations.slice(0, 2).map((rec, index) => (
-                          <li key={index}>{rec}</li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div className="results-actions-below">
-                      <motion.button
-                        className="add-to-cart-from-fitting-below"
-                        onClick={handleAddToCart}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <ShoppingCart className="w-3 h-3" />
-                        Add to Cart
-                      </motion.button>
-                      
-                      <button
-                        className="try-again-button-below"
-                        onClick={resetVirtualFitting}
-                      >
-                        Try Again
-                      </button>
-                    </div>
+                    <ZoomIn className="w-5 h-5" />
+                    <span>Click to zoom</span>
                   </motion.div>
                 )}
+              </motion.div>
+            
+              {/* Image Navigation */}
+              <button 
+                className="image-nav prev"
+                onClick={() => handleImageSelect(selectedImageIndex > 0 ? selectedImageIndex - 1 : productImages.length - 1)}
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+              <button 
+                className="image-nav next"
+                onClick={() => handleImageSelect(selectedImageIndex < productImages.length - 1 ? selectedImageIndex + 1 : 0)}
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+              
+              {/* Quick Actions */}
+              <div className="quick-actions">
+                <motion.button
+                  className="wishlist-btn"
+                  onClick={handleWishlistToggle}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  title="Add to Wishlist"
+                >
+                  <Heart className={`w-5 h-5 ${isInWishlist(product.id) ? 'text-red-500 fill-current' : 'text-gray-400'}`} />
+                </motion.button>
+                <motion.button
+                  className="share-btn"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  title="Share Product"
+                >
+                  <Share2 className="w-5 h-5 text-gray-400" />
+                </motion.button>
+                <motion.button
+                  className="compare-btn"
+                  onClick={() => setShowComparison(!showComparison)}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  title="Compare Product"
+                >
+                  <GitCompare className="w-5 h-5 text-gray-400" />
+                </motion.button>
               </div>
-            )}
+            </div>
           </div>
+
+
         </div>
 
         {/* Right Side - Product Details */}
@@ -556,6 +403,36 @@ const ProductDisplay = (props) => {
             </div>
           </motion.div>
 
+          {/* Stock & Delivery Info */}
+          <motion.div 
+            className="product-availability"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45 }}
+          >
+            <div className="stock-info">
+              <div className="stock-indicator">
+                <CheckCircle className="w-5 h-5 text-green-500" />
+                <span className="stock-text">
+                  {stockLevel > 10 ? 'In Stock' : `Only ${stockLevel} left!`}
+                </span>
+                {stockLevel <= 5 && (
+                  <span className="low-stock-badge">Low Stock</span>
+                )}
+              </div>
+              <div className="delivery-info">
+                <div className="delivery-item">
+                  <Truck className="w-4 h-4 text-blue-500" />
+                  <span>Free delivery by {deliveryDate}</span>
+                </div>
+                <div className="delivery-item">
+                  <MapPin className="w-4 h-4 text-green-500" />
+                  <span>Ships from New York</span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
           {/* Product Description */}
           <motion.div 
             className="product-description"
@@ -573,20 +450,49 @@ const ProductDisplay = (props) => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
           >
-            <h3>Select Size</h3>
+            <div className="size-header">
+              <h3>Select Size</h3>
+              <motion.button
+                className="size-guide-btn"
+                onClick={() => setShowSizeGuide(true)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Ruler className="w-4 h-4" />
+                Size Guide
+              </motion.button>
+            </div>
             <div className="size-options">
-              {sizes.map((size) => (
+              {sizes.map((sizeInfo) => (
                 <motion.button
-                  key={size}
-                  className={`size-option ${selectedSize === size ? 'selected' : ''}`}
-                  onClick={() => setSelectedSize(size)}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                  key={sizeInfo.size}
+                  className={`size-option ${selectedSize === sizeInfo.size ? 'selected' : ''} ${!sizeInfo.available ? 'unavailable' : ''} ${sizeInfo.lowStock ? 'low-stock' : ''}`}
+                  onClick={() => sizeInfo.available && setSelectedSize(sizeInfo.size)}
+                  whileHover={sizeInfo.available ? { scale: 1.05 } : {}}
+                  whileTap={sizeInfo.available ? { scale: 0.95 } : {}}
+                  disabled={!sizeInfo.available}
                 >
-                  {size}
+                  {sizeInfo.size}
+                  {sizeInfo.lowStock && sizeInfo.available && (
+                    <span className="low-stock-indicator">!</span>
+                  )}
+                  {!sizeInfo.available && (
+                    <span className="unavailable-overlay">✕</span>
+                  )}
                 </motion.button>
               ))}
             </div>
+            {selectedSize && (
+              <motion.div 
+                className="size-confirmation"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <CheckCircle className="w-4 h-4 text-green-500" />
+                <span>Size {selectedSize} selected</span>
+              </motion.div>
+            )}
           </motion.div>
 
           {/* Quantity Selector */}
@@ -627,9 +533,9 @@ const ProductDisplay = (props) => {
             transition={{ delay: 0.8 }}
           >
             <motion.button
-              className="add-to-cart-btn"
+              className="add-to-cart-btn primary"
               onClick={handleAddToCart}
-              disabled={isLoading}
+              disabled={isLoading || !isInStock}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -651,10 +557,29 @@ const ProductDisplay = (props) => {
                     className="button-content"
                   >
                     <ShoppingCart className="w-5 h-5" />
-                    Add to Cart
+                    {!isInStock ? 'Out of Stock' : 'Add to Cart'}
                   </motion.div>
                 )}
               </AnimatePresence>
+            </motion.button>
+
+            <motion.button
+              className="add-to-cart-btn secondary"
+              onClick={() => {
+                if (selectedSize) {
+                  handleAddToCart()
+                  // Navigate to checkout page
+                  window.location.href = '/cart'
+                }
+              }}
+              disabled={isLoading || !isInStock || !selectedSize}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <motion.div className="button-content">
+                <Zap className="w-5 h-5" />
+                Buy Now
+              </motion.div>
             </motion.button>
           </motion.div>
 
@@ -695,6 +620,91 @@ const ProductDisplay = (props) => {
           </motion.div>
         ))}
       </motion.div>
+
+      {/* Size Guide Modal */}
+      <AnimatePresence>
+        {showSizeGuide && (
+          <motion.div
+            className="modal-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowSizeGuide(false)}
+          >
+            <motion.div
+              className="size-guide-modal"
+              initial={{ opacity: 0, scale: 0.8, y: 50 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 50 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-header">
+                <h3>Size Guide</h3>
+                <button 
+                  className="close-btn"
+                  onClick={() => setShowSizeGuide(false)}
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="modal-content">
+                <div className="size-chart">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Size</th>
+                        <th>Chest (in)</th>
+                        <th>Waist (in)</th>
+                        <th>Length (in)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>S</td>
+                        <td>34-36</td>
+                        <td>28-30</td>
+                        <td>26</td>
+                      </tr>
+                      <tr>
+                        <td>M</td>
+                        <td>38-40</td>
+                        <td>32-34</td>
+                        <td>27</td>
+                      </tr>
+                      <tr>
+                        <td>L</td>
+                        <td>42-44</td>
+                        <td>36-38</td>
+                        <td>28</td>
+                      </tr>
+                      <tr>
+                        <td>XL</td>
+                        <td>46-48</td>
+                        <td>40-42</td>
+                        <td>29</td>
+                      </tr>
+                      <tr>
+                        <td>XXL</td>
+                        <td>50-52</td>
+                        <td>44-46</td>
+                        <td>30</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div className="measurement-tips">
+                  <h4>How to Measure:</h4>
+                  <ul>
+                    <li><strong>Chest:</strong> Measure around the fullest part of your chest</li>
+                    <li><strong>Waist:</strong> Measure around your natural waistline</li>
+                    <li><strong>Length:</strong> Measure from shoulder to hem</li>
+                  </ul>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
