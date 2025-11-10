@@ -197,9 +197,9 @@ const Footer = () => {
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
             >
-              <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-              <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
-              <a href="#" className="hover:text-white transition-colors">Cookies</a>
+              <a href="/" className="hover:text-white transition-colors">Privacy Policy</a>
+              <a href="/" className="hover:text-white transition-colors">Terms of Service</a>
+              <a href="/" className="hover:text-white transition-colors">Cookies</a>
             </motion.div>
           </div>
         </div>

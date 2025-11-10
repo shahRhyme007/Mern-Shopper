@@ -56,6 +56,7 @@ const UserProfile = () => {
     if (activeTab === 'orders') {
       fetchOrders()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab])
 
   // Redirect if not authenticated

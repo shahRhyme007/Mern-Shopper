@@ -15,7 +15,7 @@ const LoginSignup = () => {
   const [showPassword, setShowPassword] = useState(false)
   
   const navigate = useNavigate()
-  const { login, signup, isAuthenticated, isAdmin } = useContext(ShopContext)
+  const { login, signup, isAuthenticated } = useContext(ShopContext)
 
   const [formData, setFormData] = useState({
     username: "",
